@@ -34,7 +34,8 @@ class ChatViewModel(
         val userMessage = Message(text = currentInput, role = MessageRole.USER)
         uiState = uiState.copy(
             messages = uiState.messages + userMessage,
-            inputText = ""
+            inputText = "",
+            isLoading = true
         )
 
         // Request AI response
@@ -49,8 +50,11 @@ class ChatViewModel(
                     val assistantMessage =
                         Message(text = assistantText, role = MessageRole.ASSISTANT)
                     uiState = uiState.copy(
-                        messages = uiState.messages + assistantMessage
+                        messages = uiState.messages + assistantMessage,
+                        isLoading = false
                     )
+                } else {
+                    uiState = uiState.copy(isLoading = false)
                 }
             } catch (e: Exception) {
                 // On error, add error message
@@ -59,7 +63,8 @@ class ChatViewModel(
                     role = MessageRole.ASSISTANT
                 )
                 uiState = uiState.copy(
-                    messages = uiState.messages + errorMessage
+                    messages = uiState.messages + errorMessage,
+                    isLoading = false
                 )
             }
         }

@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
@@ -36,10 +38,11 @@ fun ChatScreen(
     val uiState = viewModel.uiState
     val listState = rememberLazyListState()
 
-    // Scroll to bottom when new message is added
-    LaunchedEffect(uiState.messages.size) {
-        if (uiState.messages.isNotEmpty()) {
-            listState.animateScrollToItem(uiState.messages.size - 1)
+    // Scroll to bottom when new message is added or loading state changes
+    LaunchedEffect(uiState.messages.size, uiState.isLoading) {
+        val itemCount = uiState.messages.size + if (uiState.isLoading) 1 else 0
+        if (itemCount > 0) {
+            listState.animateScrollToItem(itemCount - 1)
         }
     }
 
@@ -63,6 +66,18 @@ fun ChatScreen(
                     horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
                 ) {
                     MessageBubble(message = message)
+                }
+            }
+            
+            // Show loading bubble if loading
+            if (uiState.isLoading) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        LoadingBubble()
+                    }
                 }
             }
         }
@@ -97,6 +112,29 @@ fun ChatScreen(
             ) {
                 Text("Send")
             }
+        }
+    }
+}
+
+@Composable
+private fun LoadingBubble() {
+    Card(
+        modifier = Modifier
+            .widthIn(max = 80.dp)
+            .padding(horizontal = 4.dp),
+        elevation = 2.dp,
+        backgroundColor = MaterialTheme.colors.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colors.primary
+            )
         }
     }
 }
