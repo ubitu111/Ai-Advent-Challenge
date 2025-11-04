@@ -1,18 +1,18 @@
 plugins {
-    id("com.android.application")
-    kotlin("android")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
     namespace = "ru.mirtomsk.androidapp"
-    compileSdk = 35
+    compileSdk = libs.versions.compileSdk.get().toInt()
     
     defaultConfig {
         applicationId = "ru.mirtomsk.androidapp"
-        minSdk = 24
-        targetSdk = 35
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
     }
@@ -35,7 +35,7 @@ kotlin {
 
 dependencies {
     implementation(project(":shared"))
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation(compose.preview)
+    implementation(libs.activity.compose)
+    implementation(libs.compose.preview)
 }
 
