@@ -1,8 +1,11 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -19,6 +22,41 @@ android {
     }
 }
 
+// Read local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
+val apiKey: String = localProperties.getProperty("secret_key") ?: ""
+val keyId: String = localProperties.getProperty("key_id") ?: ""
+
+// Task to generate API config file
+tasks.register("generateApiConfig") {
+    doFirst {
+        val apiConfigFile = file("src/commonMain/resources/api.properties")
+        apiConfigFile.parentFile.mkdirs()
+        apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId")
+    }
+}
+
+// Make compilation depend on API config generation
+tasks.configureEach {
+    if (name.startsWith("compileKotlin")) {
+        dependsOn("generateApiConfig")
+    }
+}
+
+// Configure processResources tasks to handle duplicates
+afterEvaluate {
+    tasks.withType<org.gradle.api.tasks.Copy>().configureEach {
+        if (name.contains("ProcessResources")) {
+            duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.INCLUDE
+        }
+    }
+}
+
 kotlin {
     androidTarget {
         compilations.all {
@@ -28,7 +66,13 @@ kotlin {
         }
     }
 
-    jvm("desktop")
+    jvm("desktop") {
+        compilations.all {
+            kotlinOptions {
+                jvmTarget = libs.versions.jvmTarget.get().toInt().toString()
+            }
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -36,18 +80,48 @@ kotlin {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.material)
+                
+                // Ktor
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.logging)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                
+                // Serialization
+                implementation(libs.kotlinx.serialization.json)
+                
+                // Koin
+                implementation(libs.koin.core)
+                
+                // Coroutines
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
             }
+            resources.srcDirs("src/commonMain/resources")
         }
 
         val androidMain by getting {
             dependencies {
                 implementation(libs.compose.preview)
                 implementation(libs.compose.ui.tooling)
+                
+                // Ktor Android engine
+                implementation(libs.ktor.client.android)
+                
+                // Coroutines Android Main dispatcher
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
             }
         }
 
         val desktopMain by getting {
             dependsOn(commonMain)
+            
+            dependencies {
+                // Ktor CIO engine for desktop
+                implementation(libs.ktor.client.cio)
+                
+                // Coroutines Swing Main dispatcher for desktop
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+            }
         }
     }
 }

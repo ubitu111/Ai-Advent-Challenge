@@ -17,7 +17,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -25,10 +24,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import ru.mirtomsk.shared.chat.model.Message
+import ru.mirtomsk.shared.di.koinInject
 
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = remember { ChatViewModel() }
+    viewModel: ChatViewModel = koinInject()
 ) {
     val uiState = viewModel.uiState
     val listState = rememberLazyListState()
