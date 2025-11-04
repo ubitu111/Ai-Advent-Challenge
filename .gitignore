@@ -1,0 +1,142 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.dmg
+*.app
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle files
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Kotlin
+*.kotlin_module
+*.kt.swp
+
+# Kotlin Native
+.konan/
+*.klib
+
+# Android Profiling
+*.hprof
+
+# Gradle wrapper (keep wrapper jar, ignore rest)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+.gradle-wrapper/
+
+# Kotlin Multiplatform
+*.klib
+.konan/
+
+# Compose Desktop
+compose-desktop/
+
+# Android NDK
+obj/
+.externalNativeBuild/
+.cxx/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build outputs
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.ear
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Virtual machine crash logs
+hs_err_pid*
+
+# Android Studio / IntelliJ
+captures/
+.externalNativeBuild
+.cxx/
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+
+# macOS App
+*.app
+*.dmg
+*.pkg
+
+# CMake
+cmake-build-*/
+
+# Generated files
+**/generated/
+**/build/generated/
+
