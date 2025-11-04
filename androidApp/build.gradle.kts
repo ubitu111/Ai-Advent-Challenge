@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.androidapp"
+    namespace = "ru.mirtomsk.androidapp"
     compileSdk = 35
     
     defaultConfig {
-        applicationId = "com.example.androidapp"
+        applicationId = "ru.mirtomsk.androidapp"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

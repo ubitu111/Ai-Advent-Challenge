@@ -19,7 +19,7 @@ kotlin {
 
 compose.desktop {
     application {
-        mainClass = "com.example.macosapp.MainKt"
+        mainClass = "ru.mirtomsk.macosapp.MainKt"
         
         nativeDistributions {
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg)
@@ -28,7 +28,7 @@ compose.desktop {
             
             macOS {
                 packageBuildVersion = "1.0.0"
-                bundleID = "com.example.macosapp"
+                bundleID = "ru.mirtomsk.macosapp"
             }
         }
     }

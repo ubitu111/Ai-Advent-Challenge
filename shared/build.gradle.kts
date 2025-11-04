@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.shared"
+    namespace = "ru.mirtomsk.shared"
     compileSdk = 35
-    
+
     defaultConfig {
         minSdk = 24
     }
-    
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -27,12 +27,9 @@ kotlin {
             }
         }
     }
-    
+
     jvm("desktop")
-    
-    macosArm64()
-    macosX64()
-    
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -41,14 +38,14 @@ kotlin {
                 implementation(compose.material)
             }
         }
-        
+
         val androidMain by getting {
             dependencies {
                 implementation(compose.preview)
                 implementation(compose.uiTooling)
             }
         }
-        
+
         val desktopMain by getting {
             dependsOn(commonMain)
         }

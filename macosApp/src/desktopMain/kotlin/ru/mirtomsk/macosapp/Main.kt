@@ -1,8 +1,8 @@
-package com.example.macosapp
+package ru.mirtomsk.macosapp
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import com.example.shared.App
+import ru.mirtomsk.shared.App
 
 fun main() = application {
     Window(

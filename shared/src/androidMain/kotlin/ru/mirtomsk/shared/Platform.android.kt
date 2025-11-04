@@ -1,4 +1,4 @@
-package com.example.shared
+package ru.mirtomsk.shared
 
 import android.os.Build
 
