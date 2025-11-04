@@ -9,7 +9,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import ru.mirtomsk.shared.chat.model.ChatUiState
 import ru.mirtomsk.shared.chat.model.Message
+import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.repository.ChatRepository
+import ru.mirtomsk.shared.chat.repository.model.AiMessage
 
 class ChatViewModel(
     private val repository: ChatRepository,
@@ -28,19 +30,36 @@ class ChatViewModel(
         val currentInput = uiState.inputText.trim()
         if (currentInput.isBlank()) return
 
+        // Clear input immediately
+        val userMessage = Message(text = currentInput, role = MessageRole.USER)
+        uiState = uiState.copy(
+            messages = uiState.messages + userMessage,
+            inputText = ""
+        )
+
+        // Request AI response
         viewmodelScope.launch {
             try {
-                val sentMessage = repository.sendMessage(currentInput)
-                uiState = uiState.copy(
-                    messages = uiState.messages + Message(text = sentMessage.result.alternatives[0].message.text),
-                    inputText = ""
-                )
+                val aiResponse = repository.sendMessage(currentInput)
+                val assistantText = aiResponse.result.alternatives
+                    .find { it.message.role == AiMessage.Role.assistant }
+                    ?.message?.text.orEmpty()
+
+                if (assistantText.isNotBlank()) {
+                    val assistantMessage =
+                        Message(text = assistantText, role = MessageRole.ASSISTANT)
+                    uiState = uiState.copy(
+                        messages = uiState.messages + assistantMessage
+                    )
+                }
             } catch (e: Exception) {
-                // On error, add message locally
-                val newMessage = Message(text = currentInput)
+                // On error, add error message
+                val errorMessage = Message(
+                    text = "Ошибка: ${e.message ?: "Не удалось получить ответ"}",
+                    role = MessageRole.ASSISTANT
+                )
                 uiState = uiState.copy(
-                    messages = uiState.messages + newMessage,
-                    inputText = ""
+                    messages = uiState.messages + errorMessage
                 )
             }
         }

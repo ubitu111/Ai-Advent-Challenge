@@ -15,14 +15,14 @@ data class AiResponse(
     fun getText(): String {
         return result.alternatives.firstOrNull()?.message?.text ?: ""
     }
-    
+
     /**
      * Check if this is a final response
      */
     fun isFinal(): Boolean {
         return result.alternatives.firstOrNull()?.status == "ALTERNATIVE_STATUS_FINAL"
     }
-    
+
     /**
      * Check if this is a partial response
      */
@@ -55,9 +55,13 @@ data class AiAlternative(
  */
 @Serializable
 data class AiMessage(
-    val role: String,
+    val role: Role,
     val text: String,
-)
+) {
+    enum class Role {
+        system, user, assistant
+    }
+}
 
 /**
  * Token usage information

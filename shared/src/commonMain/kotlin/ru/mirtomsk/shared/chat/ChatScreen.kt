@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.Composable
@@ -24,6 +26,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import ru.mirtomsk.shared.chat.model.Message
+import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.di.koinInject
 
 @Composable
@@ -55,7 +58,12 @@ fun ChatScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(uiState.messages) { message ->
-                MessageBubble(message = message)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
+                ) {
+                    MessageBubble(message = message)
+                }
             }
         }
 
@@ -95,14 +103,27 @@ fun ChatScreen(
 
 @Composable
 private fun MessageBubble(message: Message) {
+    val isUser = message.role == MessageRole.USER
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = 2.dp
+        modifier = Modifier
+            .widthIn(max = 280.dp)
+            .padding(horizontal = 4.dp),
+        elevation = 2.dp,
+        backgroundColor = if (isUser) {
+            MaterialTheme.colors.primary
+        } else {
+            MaterialTheme.colors.surface
+        }
     ) {
         Text(
             text = message.text,
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(12.dp),
+            color = if (isUser) {
+                MaterialTheme.colors.onPrimary
+            } else {
+                MaterialTheme.colors.onSurface
+            }
         )
     }
 }
-
