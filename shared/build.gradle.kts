@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -35,9 +36,16 @@ val keyId: String = localProperties.getProperty("key_id") ?: ""
 // Task to generate API config file
 tasks.register("generateApiConfig") {
     doFirst {
+        // Generate for commonMain resources (for desktop)
         val apiConfigFile = file("src/commonMain/resources/api.properties")
         apiConfigFile.parentFile.mkdirs()
         apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId")
+        
+        // Generate for Android assets
+        val androidAssetsDir = rootProject.file("androidApp/src/main/assets")
+        androidAssetsDir.mkdirs()
+        val androidApiConfigFile = File(androidAssetsDir, "api.properties")
+        androidApiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId")
     }
 }
 

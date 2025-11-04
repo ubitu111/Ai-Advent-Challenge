@@ -8,6 +8,8 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
+expect fun createHttpClientEngine(): io.ktor.client.engine.HttpClientEngine
+
 object NetworkModule {
     /**
      * Creates and configures an HttpClient instance for network requests
@@ -16,7 +18,7 @@ object NetworkModule {
      * @return Configured HttpClient instance
      */
     fun createHttpClient(enableLogging: Boolean = true): HttpClient {
-        return HttpClient {
+        return HttpClient(createHttpClientEngine()) {
             // Don't throw exceptions on HTTP error status codes
             expectSuccess = false
             

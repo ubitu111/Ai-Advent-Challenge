@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.tasks.factory.dependsOn
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -37,5 +39,11 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.activity.compose)
     implementation(libs.compose.preview)
+}
+
+// Make Android build depend on API config generation
+afterEvaluate {
+    tasks.named("mergeDebugAssets").dependsOn(":shared:generateApiConfig")
+    tasks.named("mergeReleaseAssets").dependsOn(":shared:generateApiConfig")
 }
 
