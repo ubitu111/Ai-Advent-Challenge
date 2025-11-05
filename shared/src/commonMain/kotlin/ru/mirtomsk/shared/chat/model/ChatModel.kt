@@ -17,6 +17,7 @@ data class Message(
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val inputText: String = "",
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isSettingsOpen: Boolean = false
 )
 

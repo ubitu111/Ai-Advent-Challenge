@@ -1,6 +1,7 @@
 package ru.mirtomsk.shared.chat
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,7 +19,9 @@ import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextButton
 import androidx.compose.material.TextField
+import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -30,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.di.koinInject
+import ru.mirtomsk.shared.settings.SettingsScreen
 
 @Composable
 fun ChatScreen(
@@ -46,72 +50,97 @@ fun ChatScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        // Messages list
-        LazyColumn(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .imePadding()
-                .weight(1f)
-                .fillMaxWidth(),
-            state = listState,
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
         ) {
-            items(uiState.messages) { message ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
-                ) {
-                    MessageBubble(message = message)
+            // Top App Bar with settings button
+            TopAppBar(
+                title = { Text("Чат") },
+                actions = {
+                    TextButton(
+                        onClick = { viewModel.openSettings() },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = "⚙️",
+                            style = MaterialTheme.typography.h6
+                        )
+                    }
                 }
-            }
-            
-            // Show loading bubble if loading
-            if (uiState.isLoading) {
-                item {
+            )
+
+            // Messages list
+            LazyColumn(
+                modifier = Modifier
+                    .imePadding()
+                    .weight(1f)
+                    .fillMaxWidth(),
+                state = listState,
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(uiState.messages) { message ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
+                        horizontalArrangement = if (message.role == MessageRole.USER) Arrangement.End else Arrangement.Start
                     ) {
-                        LoadingBubble()
+                        MessageBubble(message = message)
+                    }
+                }
+                
+                // Show loading bubble if loading
+                if (uiState.isLoading) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            LoadingBubble()
+                        }
                     }
                 }
             }
-        }
 
-        // Input area
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextField(
-                value = uiState.inputText,
-                onValueChange = viewModel::updateInputText,
+            // Input area
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .onKeyEvent { keyEvent ->
-                        if (keyEvent.key == Key.Enter && uiState.inputText.isNotBlank()) {
-                            viewModel.sendMessage()
-                            true
-                        } else {
-                            false
-                        }
-                    },
-                placeholder = { Text("Type a message...") },
-                singleLine = true
-            )
-            Button(
-                onClick = viewModel::sendMessage,
-                enabled = uiState.inputText.isNotBlank()
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Send")
+                TextField(
+                    value = uiState.inputText,
+                    onValueChange = viewModel::updateInputText,
+                    modifier = Modifier
+                        .weight(1f)
+                        .onKeyEvent { keyEvent ->
+                            if (keyEvent.key == Key.Enter && uiState.inputText.isNotBlank()) {
+                                viewModel.sendMessage()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                    placeholder = { Text("Type a message...") },
+                    singleLine = true
+                )
+                Button(
+                    onClick = viewModel::sendMessage,
+                    enabled = uiState.inputText.isNotBlank()
+                ) {
+                    Text("Send")
+                }
             }
+        }
+        
+        // Settings modal dialog - overlays on top
+        if (uiState.isSettingsOpen) {
+            SettingsScreen(
+                onDismiss = { viewModel.closeSettings() }
+            )
         }
     }
 }

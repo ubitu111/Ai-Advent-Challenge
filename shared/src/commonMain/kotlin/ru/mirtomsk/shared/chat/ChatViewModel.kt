@@ -73,5 +73,13 @@ class ChatViewModel(
     fun clearMessages() {
         uiState = uiState.copy(messages = emptyList())
     }
+
+    fun openSettings() {
+        uiState = uiState.copy(isSettingsOpen = true)
+    }
+
+    fun closeSettings() {
+        uiState = uiState.copy(isSettingsOpen = false)
+    }
 }
 
