@@ -14,6 +14,8 @@ import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
+import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
  * Configuration module for API keys
@@ -54,12 +56,27 @@ val repositoryModule = module {
 }
 
 /**
+ * Settings module for Koin dependency injection
+ */
+val settingsModule = module {
+    single { ResponseFormatProvider() }
+}
+
+/**
  * ViewModel module for Koin dependency injection
  */
 val viewModelModule = module {
     factory {
         ChatViewModel(
             repository = get<ChatRepository>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            mainDispatcher = get<DispatchersProvider>().main,
+        )
+    }
+    
+    factory {
+        SettingsViewModel(
+            formatProvider = get<ResponseFormatProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
@@ -76,6 +93,7 @@ val appModule = module {
         configModule,
         networkModule,
         repositoryModule,
+        settingsModule,
         viewModelModule,
     )
 }
