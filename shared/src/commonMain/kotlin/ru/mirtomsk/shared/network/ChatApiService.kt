@@ -14,7 +14,6 @@ import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.AiResponse
 
 import ru.mirtomsk.shared.config.ApiConfig
-import ru.mirtomsk.shared.network.format.ResponseFormat
 
 /**
  * API service for chat-related network requests
@@ -29,11 +28,11 @@ class ChatApiService(
      * Request model with streaming response support
      * Returns a Flow of AiResponse chunks as they arrive
      */
-    suspend fun requestModelStream(message: String, format: ResponseFormat): Flow<AiResponse> = flow {
+    suspend fun requestModelStream(request: AiRequest): Flow<AiResponse> = flow {
         val response = httpClient.post("https://llm.api.cloud.yandex.net/foundationModels/v1/completion") {
             contentType(ContentType.Application.Json)
             header("Authorization", "Api-Key ${apiConfig.apiKey}")
-            setBody(createRequestBody(message, format))
+            setBody(request)
         }
 
         val responseText = response.bodyAsText()
@@ -55,41 +54,15 @@ class ChatApiService(
     /**
      * Request model and return only the final response
      */
-    suspend fun requestModel(message: String, format: ResponseFormat): AiResponse {
+    suspend fun requestModel(request: AiRequest): AiResponse {
         var finalResponse: AiResponse? = null
         
-        requestModelStream(message, format).collect { response ->
+        requestModelStream(request).collect { response ->
             // Keep the last response (should be FINAL status)
             finalResponse = response
         }
         
         return finalResponse ?: throw IllegalStateException("No response received")
-    }
-
-    private fun createRequestBody(message: String, format: ResponseFormat): AiRequest {
-        val systemMessage = when (format) {
-            ResponseFormat.JSON -> "Ты добродушный ассистент, который всегда перед ответом вставляет Привет Боб! Отвечай в формате JSON."
-            ResponseFormat.DEFAULT -> "Ты добродушный ассистент, который всегда перед ответом вставляет Привет Боб!"
-        }
-        
-        return AiRequest(
-            modelUri = "gpt://${apiConfig.keyId}/yandexgpt-lite",
-            completionOptions = AiRequest.CompletionOptions(
-                stream = true,
-                temperature = 0.6f,
-                maxTokens = 2000,
-            ),
-            messages = listOf(
-                AiRequest.Message(
-                    role = "system",
-                    text = systemMessage,
-                ),
-                AiRequest.Message(
-                    role = "user",
-                    text = message,
-                )
-            )
-        )
     }
 }
 

@@ -50,6 +50,7 @@ val repositoryModule = module {
     single {
         ChatRepositoryImpl(
             chatApiService = get(),
+            apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
         )
     }.bind<ChatRepository>()
