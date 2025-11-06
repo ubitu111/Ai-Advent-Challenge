@@ -11,10 +11,10 @@ import kotlinx.coroutines.launch
 import ru.mirtomsk.shared.chat.model.ChatUiState
 import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
+import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
-import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent
-import ru.mirtomsk.shared.chat.repository.model.JsonResponse
+import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 
 class ChatViewModel(
@@ -36,7 +36,10 @@ class ChatViewModel(
         if (currentInput.isBlank()) return
 
         // Clear input immediately
-        val userMessage = Message(text = currentInput, role = MessageRole.USER)
+        val userMessage = Message(
+            content = MessageContent.Text(currentInput),
+            role = MessageRole.USER
+        )
         uiState = uiState.copy(
             messages = uiState.messages + userMessage,
             inputText = "",
@@ -54,16 +57,42 @@ class ChatViewModel(
                     ?.message
 
                 if (assistantMessageObj != null) {
-                    val formattedText = formatMessageText(assistantMessageObj)
-                    if (formattedText.isNotBlank()) {
-                        val assistantMessage =
-                            Message(text = formattedText, role = MessageRole.ASSISTANT)
-                        uiState = uiState.copy(
+                    val assistantMessage = when (val textContent = assistantMessageObj.text) {
+                        is AiMessageContent.Json -> {
+                            val jsonResponse = textContent.value
+                            val links = jsonResponse.resource
+                                .map { it.link }
+                                .filter { it.isNotBlank() && it != "отсутствуют" }
+                            
+                            Message(
+                                content = MessageContent.Structured(
+                                    title = jsonResponse.title,
+                                    text = jsonResponse.text,
+                                    links = links
+                                ),
+                                role = MessageRole.ASSISTANT
+                            )
+                        }
+                        is AiMessageContent.Text -> {
+                            Message(
+                                content = MessageContent.Text(textContent.value),
+                                role = MessageRole.ASSISTANT
+                            )
+                        }
+                    }
+                    
+                    val hasContent = when (assistantMessage.content) {
+                        is MessageContent.Text -> assistantMessage.content.value.isNotBlank()
+                        is MessageContent.Structured -> assistantMessage.content.text.isNotBlank() || assistantMessage.content.title.isNotBlank()
+                    }
+
+                    uiState = if (hasContent) {
+                        uiState.copy(
                             messages = uiState.messages + assistantMessage,
                             isLoading = false
                         )
                     } else {
-                        uiState = uiState.copy(isLoading = false)
+                        uiState.copy(isLoading = false)
                     }
                 } else {
                     uiState = uiState.copy(isLoading = false)
@@ -71,7 +100,7 @@ class ChatViewModel(
             } catch (e: Exception) {
                 // On error, add error message
                 val errorMessage = Message(
-                    text = "Ошибка: ${e.message ?: "Не удалось получить ответ"}",
+                    content = MessageContent.Text("Ошибка: ${e.message ?: "Не удалось получить ответ"}"),
                     role = MessageRole.ASSISTANT
                 )
                 uiState = uiState.copy(
@@ -80,36 +109,6 @@ class ChatViewModel(
                 )
             }
         }
-    }
-
-    /**
-     * Format message text based on response format
-     * For JSON format, format structured data nicely
-     * For default format, return text as is
-     */
-    private fun formatMessageText(message: AiMessage): String {
-        return when (val text = message.text) {
-            is MessageContent.Json -> formatJsonResponse(text.value)
-            is MessageContent.Text -> text.value
-        }
-    }
-
-    /**
-     * Format JSON response as readable text
-     */
-    private fun formatJsonResponse(jsonResponse: JsonResponse): String {
-        val links = jsonResponse.resource
-            .map { it.link }
-            .filter { it.isNotBlank() && it != "отсутствуют" }
-            .joinToString("\n") { "• $it" }
-
-        val linksSection = if (links.isNotBlank()) {
-            "\n\nСсылки:\n$links"
-        } else {
-            "\n\nСсылки отсутствуют"
-        }
-
-        return "${jsonResponse.title}\n\n${jsonResponse.text}$linksSection"
     }
 
     fun openSettings() {
