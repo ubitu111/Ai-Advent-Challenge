@@ -2,6 +2,7 @@ package ru.mirtomsk.shared.chat.repository
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.AiResponse
 import ru.mirtomsk.shared.config.ApiConfig
@@ -15,12 +16,14 @@ class ChatRepositoryImpl(
     private val chatApiService: ChatApiService,
     private val apiConfig: ApiConfig,
     private val ioDispatcher: CoroutineDispatcher,
+    private val responseMapper: AiResponseMapper,
 ) : ChatRepository {
 
     override suspend fun sendMessage(text: String, format: ResponseFormat): AiResponse {
         return withContext(ioDispatcher) {
             val request = createRequestBody(text, format)
-            chatApiService.requestModel(request)
+            val responseBody = chatApiService.requestModel(request)
+            responseMapper.mapResponseBody(responseBody, format)
         }
     }
 

@@ -9,10 +9,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.serialization.json.Json
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
-import ru.mirtomsk.shared.chat.repository.model.AiResponse
-
 import ru.mirtomsk.shared.config.ApiConfig
 
 /**
@@ -21,48 +18,44 @@ import ru.mirtomsk.shared.config.ApiConfig
 class ChatApiService(
     private val httpClient: HttpClient,
     private val apiConfig: ApiConfig,
-    private val json: Json = Json { ignoreUnknownKeys = true }
 ) {
 
     /**
      * Request model with streaming response support
-     * Returns a Flow of AiResponse chunks as they arrive
+     * Returns a Flow of response body lines (NDJSON format)
      */
-    suspend fun requestModelStream(request: AiRequest): Flow<AiResponse> = flow {
-        val response = httpClient.post("https://llm.api.cloud.yandex.net/foundationModels/v1/completion") {
+    fun requestModelStream(request: AiRequest): Flow<String> = flow {
+        val response = httpClient.post(API_URL) {
             contentType(ContentType.Application.Json)
             header("Authorization", "Api-Key ${apiConfig.apiKey}")
             setBody(request)
         }
 
         val responseText = response.bodyAsText()
-        
+
         // Process NDJSON format (newline-delimited JSON)
         responseText.lines()
             .filter { it.isNotBlank() }
             .forEach { line ->
-                try {
-                    val aiResponse = json.decodeFromString<AiResponse>(line)
-                    emit(aiResponse)
-                } catch (e: Exception) {
-                    // Log error but continue processing other lines
-                    println("Error deserializing line: $line, error: ${e.message}")
-                }
+                emit(line)
             }
     }
 
     /**
-     * Request model and return only the final response
+     * Request model and return the full response body
+     * Collects all lines from NDJSON stream and returns them as a single string
      */
-    suspend fun requestModel(request: AiRequest): AiResponse {
-        var finalResponse: AiResponse? = null
-        
-        requestModelStream(request).collect { response ->
-            // Keep the last response (should be FINAL status)
-            finalResponse = response
+    suspend fun requestModel(request: AiRequest): String {
+        val lines = mutableListOf<String>()
+        requestModelStream(request).collect { line ->
+            lines.add(line)
         }
-        
-        return finalResponse ?: throw IllegalStateException("No response received")
+        return lines.joinToString("\n")
+    }
+
+    private companion object {
+
+        const val API_URL = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     }
 }
 

@@ -1,5 +1,6 @@
 package ru.mirtomsk.shared.di
 
+import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
@@ -7,6 +8,7 @@ import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
+import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
@@ -47,11 +49,22 @@ val networkModule = module {
  * Repository module for Koin dependency injection
  */
 val repositoryModule = module {
+    single<Json> {
+        Json { ignoreUnknownKeys = true }
+    }
+
+    single {
+        AiResponseMapper(
+            json = get()
+        )
+    }
+
     single {
         ChatRepositoryImpl(
             chatApiService = get(),
             apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
+            responseMapper = get(),
         )
     }.bind<ChatRepository>()
 }
@@ -74,7 +87,7 @@ val viewModelModule = module {
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
-    
+
     factory {
         SettingsViewModel(
             formatProvider = get<ResponseFormatProvider>(),

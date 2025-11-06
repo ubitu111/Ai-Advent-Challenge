@@ -13,6 +13,8 @@ import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
+import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent
+import ru.mirtomsk.shared.chat.repository.model.JsonResponse
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 
 class ChatViewModel(
@@ -47,17 +49,22 @@ class ChatViewModel(
                 // Get current format from Flow
                 val format = formatProvider.responseFormat.first()
                 val aiResponse = repository.sendMessage(currentInput, format)
-                val assistantText = aiResponse.result.alternatives
-                    .find { it.message.role == AiMessage.Role.assistant }
-                    ?.message?.text.orEmpty()
+                val assistantMessageObj = aiResponse.result.alternatives
+                    .find { it.message.role == AiMessage.Role.ASSISTANT }
+                    ?.message
 
-                if (assistantText.isNotBlank()) {
-                    val assistantMessage =
-                        Message(text = assistantText, role = MessageRole.ASSISTANT)
-                    uiState = uiState.copy(
-                        messages = uiState.messages + assistantMessage,
-                        isLoading = false
-                    )
+                if (assistantMessageObj != null) {
+                    val formattedText = formatMessageText(assistantMessageObj)
+                    if (formattedText.isNotBlank()) {
+                        val assistantMessage =
+                            Message(text = formattedText, role = MessageRole.ASSISTANT)
+                        uiState = uiState.copy(
+                            messages = uiState.messages + assistantMessage,
+                            isLoading = false
+                        )
+                    } else {
+                        uiState = uiState.copy(isLoading = false)
+                    }
                 } else {
                     uiState = uiState.copy(isLoading = false)
                 }
@@ -75,8 +82,34 @@ class ChatViewModel(
         }
     }
 
-    fun clearMessages() {
-        uiState = uiState.copy(messages = emptyList())
+    /**
+     * Format message text based on response format
+     * For JSON format, format structured data nicely
+     * For default format, return text as is
+     */
+    private fun formatMessageText(message: AiMessage): String {
+        return when (val text = message.text) {
+            is MessageContent.Json -> formatJsonResponse(text.value)
+            is MessageContent.Text -> text.value
+        }
+    }
+
+    /**
+     * Format JSON response as readable text
+     */
+    private fun formatJsonResponse(jsonResponse: JsonResponse): String {
+        val links = jsonResponse.resource
+            .map { it.link }
+            .filter { it.isNotBlank() && it != "отсутствуют" }
+            .joinToString("\n") { "• $it" }
+
+        val linksSection = if (links.isNotBlank()) {
+            "\n\nСсылки:\n$links"
+        } else {
+            "\n\nСсылки отсутствуют"
+        }
+
+        return "${jsonResponse.title}\n\n${jsonResponse.text}$linksSection"
     }
 
     fun openSettings() {

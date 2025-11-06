@@ -1,5 +1,6 @@
 package ru.mirtomsk.shared.chat.repository.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -8,28 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AiResponse(
     val result: AiResult,
-) {
-    /**
-     * Extract the first alternative text from response
-     */
-    fun getText(): String {
-        return result.alternatives.firstOrNull()?.message?.text ?: ""
-    }
-
-    /**
-     * Check if this is a final response
-     */
-    fun isFinal(): Boolean {
-        return result.alternatives.firstOrNull()?.status == "ALTERNATIVE_STATUS_FINAL"
-    }
-
-    /**
-     * Check if this is a partial response
-     */
-    fun isPartial(): Boolean {
-        return result.alternatives.firstOrNull()?.status == "ALTERNATIVE_STATUS_PARTIAL"
-    }
-}
+)
 
 /**
  * Result data from API response
@@ -56,11 +36,46 @@ data class AiAlternative(
 @Serializable
 data class AiMessage(
     val role: Role,
-    val text: String,
+    val text: MessageContent,
 ) {
+    @Serializable
     enum class Role {
-        system, user, assistant
+        @SerialName("system")
+        SYSTEM,
+
+        @SerialName("user")
+        USER,
+
+        @SerialName("assistant")
+        ASSISTANT
     }
+
+    /**
+     * Message content - either plain text or JSON structured data
+     */
+    @Serializable(with = MessageContentSerializer::class)
+    sealed class MessageContent {
+        @Serializable
+        data class Text(val value: String) : MessageContent()
+
+        @Serializable
+        data class Json(val value: JsonResponse) : MessageContent()
+    }
+}
+
+/**
+ * Structured JSON response content
+ */
+@Serializable
+data class JsonResponse(
+    val title: String,
+    val text: String,
+    val resource: List<ResourceItem>,
+) {
+    @Serializable
+    data class ResourceItem(
+        val link: String,
+    )
 }
 
 /**
