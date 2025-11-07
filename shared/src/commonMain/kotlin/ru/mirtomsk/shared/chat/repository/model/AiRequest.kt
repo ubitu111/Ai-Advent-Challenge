@@ -17,7 +17,7 @@ data class AiRequest(
 
     @Serializable
     data class Message(
-        val role: String,
+        val role: MessageRoleDto,
         val text: String,
     )
 }

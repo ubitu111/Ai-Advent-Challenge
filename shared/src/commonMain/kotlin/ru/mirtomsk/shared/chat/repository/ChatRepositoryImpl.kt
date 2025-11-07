@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.AiResponse
+import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.format.ResponseFormat
@@ -52,11 +53,11 @@ class ChatRepositoryImpl(
             ),
             messages = listOf(
                 AiRequest.Message(
-                    role = "system",
+                    role = MessageRoleDto.SYSTEM,
                     text = systemMessage,
                 ),
                 AiRequest.Message(
-                    role = "user",
+                    role = MessageRoleDto.USER,
                     text = message,
                 )
             )

@@ -13,9 +13,9 @@ import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.chat.repository.ChatRepository
-import ru.mirtomsk.shared.chat.repository.model.AiMessage
-import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
+import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
 
 class ChatViewModel(
     private val repository: ChatRepository,
@@ -53,7 +53,7 @@ class ChatViewModel(
                 val format = formatProvider.responseFormat.first()
                 val aiResponse = repository.sendMessage(currentInput, format)
                 val assistantMessageObj = aiResponse.result.alternatives
-                    .find { it.message.role == AiMessage.Role.ASSISTANT }
+                    .find { it.message.role == MessageRoleDto.ASSISTANT }
                     ?.message
 
                 if (assistantMessageObj != null) {
@@ -63,7 +63,7 @@ class ChatViewModel(
                             val links = jsonResponse.resource
                                 .map { it.link }
                                 .filter { it.isNotBlank() && it != "отсутствуют" }
-                            
+
                             Message(
                                 content = MessageContent.Structured(
                                     title = jsonResponse.title,
@@ -73,6 +73,7 @@ class ChatViewModel(
                                 role = MessageRole.ASSISTANT
                             )
                         }
+
                         is AiMessageContent.Text -> {
                             Message(
                                 content = MessageContent.Text(textContent.value),
@@ -80,7 +81,7 @@ class ChatViewModel(
                             )
                         }
                     }
-                    
+
                     val hasContent = when (assistantMessage.content) {
                         is MessageContent.Text -> assistantMessage.content.value.isNotBlank()
                         is MessageContent.Structured -> assistantMessage.content.text.isNotBlank() || assistantMessage.content.title.isNotBlank()
