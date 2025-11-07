@@ -13,7 +13,6 @@ import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.chat.repository.ChatRepository
-import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
 
@@ -52,12 +51,9 @@ class ChatViewModel(
                 // Get current format from Flow
                 val format = formatProvider.responseFormat.first()
                 val aiResponse = repository.sendMessage(currentInput, format)
-                val assistantMessageObj = aiResponse.result.alternatives
-                    .find { it.message.role == MessageRoleDto.ASSISTANT }
-                    ?.message
 
-                if (assistantMessageObj != null) {
-                    val assistantMessage = when (val textContent = assistantMessageObj.text) {
+                if (aiResponse != null) {
+                    val assistantMessage = when (val textContent = aiResponse.text) {
                         is AiMessageContent.Json -> {
                             val jsonResponse = textContent.value
                             val links = jsonResponse.resource

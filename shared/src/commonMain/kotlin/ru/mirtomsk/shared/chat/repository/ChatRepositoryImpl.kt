@@ -1,10 +1,12 @@
 package ru.mirtomsk.shared.chat.repository
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.model.AiMessage
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
-import ru.mirtomsk.shared.chat.repository.model.AiResponse
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
@@ -20,48 +22,84 @@ class ChatRepositoryImpl(
     private val responseMapper: AiResponseMapper,
 ) : ChatRepository {
 
-    override suspend fun sendMessage(text: String, format: ResponseFormat): AiResponse {
+    // Кеш истории общения в оперативной памяти
+    private val conversationCache = mutableListOf(
+        AiRequest.Message(
+            role = MessageRoleDto.SYSTEM,
+            text = DEFAULT_FORMAT_SYSTEM_MESSAGE,
+        )
+    )
+    private val cacheMutex = Mutex()
+
+    override suspend fun sendMessage(text: String, format: ResponseFormat): AiMessage? {
         return withContext(ioDispatcher) {
-            val request = createRequestBody(text, format)
-            val responseBody = chatApiService.requestModel(request)
-            responseMapper.mapResponseBody(responseBody, format)
+            cacheMutex.withLock {
+                // Добавляем текущее сообщение пользователя в кеш
+                conversationCache.add(
+                    AiRequest.Message(
+                        role = MessageRoleDto.USER,
+                        text = text,
+                    )
+                )
+
+                // Формируем запрос: системное сообщение + все сообщения пользователя + только последнее сообщение ассистента
+                val request = AiRequest(
+                    modelUri = "gpt://${apiConfig.keyId}/yandexgpt-lite",
+                    completionOptions = AiRequest.CompletionOptions(
+                        stream = true,
+                        temperature = 0.6f,
+                        maxTokens = 2000,
+                    ),
+                    messages = conversationCache,
+                )
+                val responseBody = chatApiService.requestModel(request)
+                val response = responseMapper.mapResponseBody(responseBody, format)
+
+                // Добавляем сообщение ассистента из response в кеш
+                val assistantMessage = response.result.alternatives
+                    .find { it.message.role == MessageRoleDto.ASSISTANT }
+                    ?.message
+                    ?: return@withLock null
+
+                // Преобразуем AiMessage в AiRequest.Message
+                val messageText = when (val content = assistantMessage.text) {
+                    is AiMessage.MessageContent.Text -> content.value
+                    is AiMessage.MessageContent.Json -> {
+                        // Для JSON формата преобразуем в текстовое представление
+                        val jsonResponse = content.value
+                        val linksText = if (jsonResponse.resource.isNotEmpty()) {
+                            "\nСсылки:\n${jsonResponse.resource.joinToString("\n") { it.link }}"
+                        } else ""
+                        "${jsonResponse.title}\n${jsonResponse.text}$linksText"
+                    }
+                }
+                conversationCache.add(
+                    AiRequest.Message(
+                        role = MessageRoleDto.ASSISTANT,
+                        text = messageText
+                    )
+                )
+
+                assistantMessage
+            }
         }
     }
 
-    private fun createRequestBody(message: String, format: ResponseFormat): AiRequest {
-        val systemMessage = when (format) {
-            ResponseFormat.JSON -> """
-            Ты виртуальный помощник наподобие Алисы от Яндекса. Отвечай в формате JSON.
-            Ответ должен быть валидным JSON объектом со следующей структурой:
-            {
-                "title": "краткий заголовок ответа",
-                "text": "развернутый ответ на вопрос",
-                "resource": "массив JSON объектов, в котором поле "link" с типом строка со ссылками, связанных с вопросом. Если ссылок нет, верни массив с одним объектом, внутри которого вместо ссылки слово 'отсутствуют'"
-            }
-            Всегда возвращай валидный JSON, даже если ответ короткий.
-            """
+    private companion object {
 
-            ResponseFormat.DEFAULT -> "Ты виртуальный помощник наподобие Алисы от Яндекса"
-        }
+        const val JSON_FORMAT_SYSTEM_MESSAGE = """
+                        Ты виртуальный помощник наподобие Алисы от Яндекса. Отвечай в формате JSON.
+                        Ответ должен быть валидным JSON объектом со следующей структурой:
+                        {
+                            "title": "краткий заголовок ответа",
+                            "text": "развернутый ответ на вопрос",
+                            "resource": "массив JSON объектов, в котором поле "link" с типом строка со ссылками, связанных с вопросом. Если ссылок нет, верни массив с одним объектом, внутри которого вместо ссылки слово 'отсутствуют'"
+                        }
+                        Всегда возвращай валидный JSON, даже если ответ короткий.
+                        """
 
-        return AiRequest(
-            modelUri = "gpt://${apiConfig.keyId}/yandexgpt-lite",
-            completionOptions = AiRequest.CompletionOptions(
-                stream = true,
-                temperature = 0.6f,
-                maxTokens = 2000,
-            ),
-            messages = listOf(
-                AiRequest.Message(
-                    role = MessageRoleDto.SYSTEM,
-                    text = systemMessage,
-                ),
-                AiRequest.Message(
-                    role = MessageRoleDto.USER,
-                    text = message,
-                )
-            )
-        )
+        const val DEFAULT_FORMAT_SYSTEM_MESSAGE =
+            "Ты виртуальный помощник наподобие Алисы от Яндекса"
     }
 }
 
