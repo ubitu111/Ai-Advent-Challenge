@@ -6,15 +6,20 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ru.mirtomsk.shared.chat.model.ChatUiState
 import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
+import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
+import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
+import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 
 class ChatViewModel(
     private val repository: ChatRepository,
+    private val formatProvider: ResponseFormatProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
 
@@ -31,7 +36,10 @@ class ChatViewModel(
         if (currentInput.isBlank()) return
 
         // Clear input immediately
-        val userMessage = Message(text = currentInput, role = MessageRole.USER)
+        val userMessage = Message(
+            content = MessageContent.Text(currentInput),
+            role = MessageRole.USER
+        )
         uiState = uiState.copy(
             messages = uiState.messages + userMessage,
             inputText = "",
@@ -41,25 +49,58 @@ class ChatViewModel(
         // Request AI response
         viewmodelScope.launch {
             try {
-                val aiResponse = repository.sendMessage(currentInput)
-                val assistantText = aiResponse.result.alternatives
-                    .find { it.message.role == AiMessage.Role.assistant }
-                    ?.message?.text.orEmpty()
+                // Get current format from Flow
+                val format = formatProvider.responseFormat.first()
+                val aiResponse = repository.sendMessage(currentInput, format)
+                val assistantMessageObj = aiResponse.result.alternatives
+                    .find { it.message.role == AiMessage.Role.ASSISTANT }
+                    ?.message
 
-                if (assistantText.isNotBlank()) {
-                    val assistantMessage =
-                        Message(text = assistantText, role = MessageRole.ASSISTANT)
-                    uiState = uiState.copy(
-                        messages = uiState.messages + assistantMessage,
-                        isLoading = false
-                    )
+                if (assistantMessageObj != null) {
+                    val assistantMessage = when (val textContent = assistantMessageObj.text) {
+                        is AiMessageContent.Json -> {
+                            val jsonResponse = textContent.value
+                            val links = jsonResponse.resource
+                                .map { it.link }
+                                .filter { it.isNotBlank() && it != "отсутствуют" }
+                            
+                            Message(
+                                content = MessageContent.Structured(
+                                    title = jsonResponse.title,
+                                    text = jsonResponse.text,
+                                    links = links
+                                ),
+                                role = MessageRole.ASSISTANT
+                            )
+                        }
+                        is AiMessageContent.Text -> {
+                            Message(
+                                content = MessageContent.Text(textContent.value),
+                                role = MessageRole.ASSISTANT
+                            )
+                        }
+                    }
+                    
+                    val hasContent = when (assistantMessage.content) {
+                        is MessageContent.Text -> assistantMessage.content.value.isNotBlank()
+                        is MessageContent.Structured -> assistantMessage.content.text.isNotBlank() || assistantMessage.content.title.isNotBlank()
+                    }
+
+                    uiState = if (hasContent) {
+                        uiState.copy(
+                            messages = uiState.messages + assistantMessage,
+                            isLoading = false
+                        )
+                    } else {
+                        uiState.copy(isLoading = false)
+                    }
                 } else {
                     uiState = uiState.copy(isLoading = false)
                 }
             } catch (e: Exception) {
                 // On error, add error message
                 val errorMessage = Message(
-                    text = "Ошибка: ${e.message ?: "Не удалось получить ответ"}",
+                    content = MessageContent.Text("Ошибка: ${e.message ?: "Не удалось получить ответ"}"),
                     role = MessageRole.ASSISTANT
                 )
                 uiState = uiState.copy(
@@ -68,10 +109,6 @@ class ChatViewModel(
                 )
             }
         }
-    }
-
-    fun clearMessages() {
-        uiState = uiState.copy(messages = emptyList())
     }
 
     fun openSettings() {

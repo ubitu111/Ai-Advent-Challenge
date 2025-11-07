@@ -1,5 +1,6 @@
 package ru.mirtomsk.shared.di
 
+import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
@@ -7,6 +8,7 @@ import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
+import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
@@ -14,6 +16,8 @@ import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
+import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
  * Configuration module for API keys
@@ -45,12 +49,31 @@ val networkModule = module {
  * Repository module for Koin dependency injection
  */
 val repositoryModule = module {
+    single<Json> {
+        Json { ignoreUnknownKeys = true }
+    }
+
+    single {
+        AiResponseMapper(
+            json = get()
+        )
+    }
+
     single {
         ChatRepositoryImpl(
             chatApiService = get(),
+            apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
+            responseMapper = get(),
         )
     }.bind<ChatRepository>()
+}
+
+/**
+ * Settings module for Koin dependency injection
+ */
+val settingsModule = module {
+    single { ResponseFormatProvider() }
 }
 
 /**
@@ -60,6 +83,14 @@ val viewModelModule = module {
     factory {
         ChatViewModel(
             repository = get<ChatRepository>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            mainDispatcher = get<DispatchersProvider>().main,
+        )
+    }
+
+    factory {
+        SettingsViewModel(
+            formatProvider = get<ResponseFormatProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
@@ -76,6 +107,7 @@ val appModule = module {
         configModule,
         networkModule,
         repositoryModule,
+        settingsModule,
         viewModelModule,
     )
 }
