@@ -16,6 +16,7 @@ import androidx.compose.material.Card
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.RadioButton
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -133,6 +134,36 @@ fun SettingsScreen(
                             }
                         ) {
                             Text("json")
+                        }
+                    }
+                }
+                
+                // Agent Selection section
+                Text(
+                    text = Strings.AGENT_SELECTION_TITLE,
+                    style = MaterialTheme.typography.subtitle1,
+                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                )
+                
+                // Radio buttons group
+                Column {
+                    AgentType.values().forEach { agentType ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setSelectedAgent(agentType) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.selectedAgent == agentType,
+                                onClick = null
+                            )
+                            Text(
+                                text = Strings.getAgentName(agentType),
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
                         }
                     }
                 }

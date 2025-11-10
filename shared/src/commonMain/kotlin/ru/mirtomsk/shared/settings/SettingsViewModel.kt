@@ -34,6 +34,10 @@ class SettingsViewModel(
         formatProvider.updateFormat(format)
     }
 
+    fun setSelectedAgent(agentType: AgentType) {
+        uiState = uiState.copy(selectedAgent = agentType)
+    }
+
     private fun formatToString(format: ResponseFormat): String {
         return when (format) {
             ResponseFormat.DEFAULT -> "дефолт"
