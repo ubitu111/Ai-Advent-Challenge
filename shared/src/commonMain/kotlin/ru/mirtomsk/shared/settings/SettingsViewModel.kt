@@ -67,8 +67,8 @@ class SettingsViewModel(
     private fun agentTypeToAgentTypeDto(agentType: AgentType): AgentTypeDto {
         return when (agentType) {
             AgentType.LITE -> AgentTypeDto.LITE
-            AgentType.LITE_BY_STEP -> AgentTypeDto.LITE_BY_STEP
-            AgentType.QWEN -> AgentTypeDto.QWEN
+            AgentType.BY_STEP -> AgentTypeDto.BY_STEP
+            AgentType.PRO -> AgentTypeDto.PRO
             AgentType.AGENT_GROUP -> AgentTypeDto.AGENT_GROUP
         }
     }
@@ -76,8 +76,8 @@ class SettingsViewModel(
     private fun agentTypeDtoToAgentType(agentTypeDto: AgentTypeDto): AgentType {
         return when (agentTypeDto) {
             AgentTypeDto.LITE -> AgentType.LITE
-            AgentTypeDto.LITE_BY_STEP -> AgentType.LITE_BY_STEP
-            AgentTypeDto.QWEN -> AgentType.QWEN
+            AgentTypeDto.BY_STEP -> AgentType.BY_STEP
+            AgentTypeDto.PRO -> AgentType.PRO
             AgentTypeDto.AGENT_GROUP -> AgentType.AGENT_GROUP
         }
     }
