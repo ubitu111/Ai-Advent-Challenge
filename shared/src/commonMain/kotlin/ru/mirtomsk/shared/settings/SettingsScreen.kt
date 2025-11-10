@@ -10,12 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Surface
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.RadioButton
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import ru.mirtomsk.shared.di.koinInject
+import ru.mirtomsk.shared.settings.model.AgentType
 
 @Composable
 fun SettingsScreen(
@@ -49,7 +51,7 @@ fun SettingsScreen(
                 .clickable(onClick = onDismiss),
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.5f)
         ) {}
-        
+
         // Settings card
         Card(
             modifier = Modifier
@@ -69,18 +71,18 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.h5,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 // Response Format section
                 Text(
                     text = "Формат ответа",
                     style = MaterialTheme.typography.subtitle1,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
+
                 // Spinner-like dropdown
                 val density = LocalDensity.current
                 var spinnerWidth by remember { mutableStateOf(0.dp) }
-                
+
                 Box(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -136,7 +138,37 @@ fun SettingsScreen(
                         }
                     }
                 }
-                
+
+                // Agent Selection section
+                Text(
+                    text = Strings.AGENT_SELECTION_TITLE,
+                    style = MaterialTheme.typography.subtitle1,
+                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                )
+
+                // Radio buttons group
+                Column {
+                    AgentType.entries.forEach { agentType ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setSelectedAgent(agentType) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.selectedAgent == agentType,
+                                onClick = null
+                            )
+                            Text(
+                                text = Strings.getAgentName(agentType),
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
+                    }
+                }
+
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier
