@@ -1,6 +1,5 @@
 package ru.mirtomsk.shared.chat.repository.model
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -35,20 +34,9 @@ data class AiAlternative(
  */
 @Serializable
 data class AiMessage(
-    val role: Role,
+    val role: MessageRoleDto,
     val text: MessageContent,
 ) {
-    @Serializable
-    enum class Role {
-        @SerialName("system")
-        SYSTEM,
-
-        @SerialName("user")
-        USER,
-
-        @SerialName("assistant")
-        ASSISTANT
-    }
 
     /**
      * Message content - either plain text or JSON structured data
