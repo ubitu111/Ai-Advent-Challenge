@@ -16,6 +16,7 @@ import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
+import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
 
@@ -74,6 +75,7 @@ val repositoryModule = module {
  */
 val settingsModule = module {
     single { ResponseFormatProvider() }
+    single { AgentTypeProvider() }
 }
 
 /**
@@ -84,6 +86,7 @@ val viewModelModule = module {
         ChatViewModel(
             repository = get<ChatRepository>(),
             formatProvider = get<ResponseFormatProvider>(),
+            agentTypeProvider = get<AgentTypeProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
@@ -91,6 +94,7 @@ val viewModelModule = module {
     factory {
         SettingsViewModel(
             formatProvider = get<ResponseFormatProvider>(),
+            agentTypeProvider = get<AgentTypeProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

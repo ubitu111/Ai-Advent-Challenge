@@ -1,18 +1,20 @@
 package ru.mirtomsk.shared.settings
 
+import ru.mirtomsk.shared.settings.model.AgentType
+
 object Strings {
     // Agent selection
     const val AGENT_SELECTION_TITLE = "Выбор агента"
-    const val AGENT_1 = "агент 1"
-    const val AGENT_1_STEP_BY_STEP = "агент 1 пошаговый"
-    const val AGENT_2 = "агент 2"
-    const val AGENT_GROUP = "группа агентов"
+    const val LITE = "YandexGpt Lite"
+    const val LITE_BY_STEP = "YandexGpt Lite пошаговый"
+    const val QWEN = "QWEN"
+    const val AGENT_GROUP = "Группа агентов"
 
     fun getAgentName(agentType: AgentType): String {
         return when (agentType) {
-            AgentType.AGENT_1 -> AGENT_1
-            AgentType.AGENT_1_STEP_BY_STEP -> AGENT_1_STEP_BY_STEP
-            AgentType.AGENT_2 -> AGENT_2
+            AgentType.LITE -> LITE
+            AgentType.LITE_BY_STEP -> LITE_BY_STEP
+            AgentType.QWEN -> QWEN
             AgentType.AGENT_GROUP -> AGENT_GROUP
         }
     }
