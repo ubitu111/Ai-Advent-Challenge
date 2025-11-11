@@ -1,6 +1,7 @@
 package ru.mirtomsk.shared.chat.repository
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -11,7 +12,11 @@ import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
+import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.format.ResponseFormat
+import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.network.prompt.SystemPromptDto
+import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 
 /**
  * Implementation of ChatRepository using ChatApiService
@@ -21,21 +26,32 @@ class ChatRepositoryImpl(
     private val apiConfig: ApiConfig,
     private val ioDispatcher: CoroutineDispatcher,
     private val responseMapper: AiResponseMapper,
+    private val formatProvider: ResponseFormatProvider,
+    private val agentTypeProvider: AgentTypeProvider,
+    private val systemPromptProvider: SystemPromptProvider,
 ) : ChatRepository {
 
     // Кеш истории общения в оперативной памяти
     private val conversationCache = mutableListOf<AiRequest.Message>()
     private val cacheMutex = Mutex()
     private var lastAgentType: AgentTypeDto? = null
+    private var lastSystemPrompt: SystemPromptDto? = null
 
     override suspend fun sendMessage(
-        text: String,
-        format: ResponseFormat,
-        agentType: AgentTypeDto
+        text: String
     ): AiMessage? {
         return withContext(ioDispatcher) {
+            // Get current format, agent type and system prompt from providers
+            val format = formatProvider.responseFormat.first()
+            val agentType = agentTypeProvider.agentType.first()
+            val systemPrompt = systemPromptProvider.systemPrompt.first()
+
             cacheMutex.withLock {
                 if (lastAgentType != null && lastAgentType != agentType) {
+                    conversationCache.clear()
+                }
+
+                if (lastSystemPrompt != null && lastSystemPrompt != systemPrompt) {
                     conversationCache.clear()
                 }
 
@@ -43,11 +59,12 @@ class ChatRepositoryImpl(
                     conversationCache.add(
                         AiRequest.Message(
                             role = MessageRoleDto.SYSTEM,
-                            text = selectPrompt(agentType, format),
+                            text = selectPrompt(systemPrompt, format),
                         )
                     )
                 }
                 lastAgentType = agentType
+                lastSystemPrompt = systemPrompt
 
                 // Добавляем текущее сообщение пользователя в кеш
                 conversationCache.add(
@@ -100,12 +117,12 @@ class ChatRepositoryImpl(
         }
     }
 
-    private fun selectPrompt(agentType: AgentTypeDto, format: ResponseFormat): String {
-        val basePrompt = when (agentType) {
-            AgentTypeDto.LITE -> Prompts.LOGIC_SIMPLE
-            AgentTypeDto.BY_STEP -> Prompts.LOGIC_BY_STEP
-            AgentTypeDto.PRO -> Prompts.LOGIC_SIMPLE
-            AgentTypeDto.AGENT_GROUP -> Prompts.LOGIC_GROUP
+    private fun selectPrompt(systemPrompt: SystemPromptDto, format: ResponseFormat): String {
+        val basePrompt = when (systemPrompt) {
+            SystemPromptDto.SPECIFYING_QUESTIONS -> Prompts.SPECIFYING_QUESTIONS
+            SystemPromptDto.LOGIC_BY_STEP -> Prompts.LOGIC_BY_STEP
+            SystemPromptDto.LOGIC_AGENT_GROUP -> Prompts.LOGIC_GROUP
+            SystemPromptDto.LOGIC_SIMPLE -> Prompts.LOGIC_SIMPLE
         }
         val formatPrompt = when (format) {
             ResponseFormat.DEFAULT -> Prompts.DEFAULT_FORMAT_RESPONSE
@@ -117,9 +134,7 @@ class ChatRepositoryImpl(
     private fun getModel(agentType: AgentTypeDto): String {
         return when (agentType) {
             AgentTypeDto.LITE -> MODEL_LITE
-            AgentTypeDto.BY_STEP -> MODEL_LITE
             AgentTypeDto.PRO -> MODEL_PRO
-            AgentTypeDto.AGENT_GROUP -> MODEL_PRO
         }
     }
 
