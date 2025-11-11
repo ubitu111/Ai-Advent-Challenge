@@ -10,11 +10,15 @@ object Strings {
     const val PRO = "YandexGpt Pro"
     
     // System prompt selection
+    const val EMPTY = "Пустой"
     const val SYSTEM_PROMPT_SELECTION_TITLE = "Системный промпт"
     const val SPECIFYING_QUESTIONS = "Уточняющие вопросы"
     const val LOGIC_SIMPLE = "Логика - простой"
     const val LOGIC_BY_STEP = "Логика - пошаговый"
     const val LOGIC_AGENT_GROUP = "Логика - группа агентов"
+    
+    // Context reset
+    const val RESET_CONTEXT_BUTTON = "Сбросить контекст"
 
     fun getAgentName(agentType: AgentType): String {
         return when (agentType) {
@@ -25,6 +29,7 @@ object Strings {
     
     fun getSystemPromptName(systemPrompt: SystemPrompt): String {
         return when (systemPrompt) {
+            SystemPrompt.EMPTY -> EMPTY
             SystemPrompt.SPECIFYING_QUESTIONS -> SPECIFYING_QUESTIONS
             SystemPrompt.LOGIC_BY_STEP -> LOGIC_BY_STEP
             SystemPrompt.LOGIC_AGENT_GROUP -> LOGIC_AGENT_GROUP

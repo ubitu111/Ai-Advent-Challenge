@@ -200,11 +200,21 @@ fun SettingsScreen(
                     }
                 }
 
+                // Reset Context button
+                Button(
+                    onClick = { viewModel.resetContext() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp)
+                ) {
+                    Text(Strings.RESET_CONTEXT_BUTTON)
+                }
+
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 24.dp)
+                        .padding(top = 16.dp)
                 ) {
                     Text("Закрыть")
                 }

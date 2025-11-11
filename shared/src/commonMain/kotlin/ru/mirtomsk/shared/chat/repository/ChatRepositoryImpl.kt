@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
@@ -29,6 +30,7 @@ class ChatRepositoryImpl(
     private val formatProvider: ResponseFormatProvider,
     private val agentTypeProvider: AgentTypeProvider,
     private val systemPromptProvider: SystemPromptProvider,
+    private val contextResetProvider: ContextResetProvider,
 ) : ChatRepository {
 
     // Кеш истории общения в оперативной памяти
@@ -36,17 +38,27 @@ class ChatRepositoryImpl(
     private val cacheMutex = Mutex()
     private var lastAgentType: AgentTypeDto? = null
     private var lastSystemPrompt: SystemPromptDto? = null
+    private var lastResetCounter: Long = 0L
 
     override suspend fun sendMessage(
         text: String
     ): AiMessage? {
         return withContext(ioDispatcher) {
-            // Get current format, agent type and system prompt from providers
+            // Get current format, agent type, system prompt and reset counter from providers
             val format = formatProvider.responseFormat.first()
             val agentType = agentTypeProvider.agentType.first()
             val systemPrompt = systemPromptProvider.systemPrompt.first()
+            val resetCounter = contextResetProvider.resetCounter.first()
 
             cacheMutex.withLock {
+                // Check if context was reset
+                if (resetCounter != lastResetCounter) {
+                    conversationCache.clear()
+                    lastAgentType = null
+                    lastSystemPrompt = null
+                    lastResetCounter = resetCounter
+                }
+
                 if (lastAgentType != null && lastAgentType != agentType) {
                     conversationCache.clear()
                 }
@@ -119,6 +131,7 @@ class ChatRepositoryImpl(
 
     private fun selectPrompt(systemPrompt: SystemPromptDto, format: ResponseFormat): String {
         val basePrompt = when (systemPrompt) {
+            SystemPromptDto.EMPTY -> Prompts.EMPTY
             SystemPromptDto.SPECIFYING_QUESTIONS -> Prompts.SPECIFYING_QUESTIONS
             SystemPromptDto.LOGIC_BY_STEP -> Prompts.LOGIC_BY_STEP
             SystemPromptDto.LOGIC_AGENT_GROUP -> Prompts.LOGIC_GROUP

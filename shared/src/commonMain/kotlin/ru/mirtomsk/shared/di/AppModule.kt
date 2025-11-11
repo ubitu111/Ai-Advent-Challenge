@@ -16,6 +16,7 @@ import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
+import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
@@ -70,6 +71,7 @@ val repositoryModule = module {
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
             systemPromptProvider = get<SystemPromptProvider>(),
+            contextResetProvider = get<ContextResetProvider>(),
         )
     }.bind<ChatRepository>()
 }
@@ -81,6 +83,7 @@ val settingsModule = module {
     single { ResponseFormatProvider() }
     single { AgentTypeProvider() }
     single { SystemPromptProvider() }
+    single { ContextResetProvider() }
 }
 
 /**
@@ -99,6 +102,7 @@ val viewModelModule = module {
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
             systemPromptProvider = get<SystemPromptProvider>(),
+            contextResetProvider = get<ContextResetProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

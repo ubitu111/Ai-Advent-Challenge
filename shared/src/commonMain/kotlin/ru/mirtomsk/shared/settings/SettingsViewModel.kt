@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.format.ResponseFormat
@@ -22,6 +23,7 @@ class SettingsViewModel(
     private val formatProvider: ResponseFormatProvider,
     private val agentTypeProvider: AgentTypeProvider,
     private val systemPromptProvider: SystemPromptProvider,
+    private val contextResetProvider: ContextResetProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -61,6 +63,10 @@ class SettingsViewModel(
         systemPromptProvider.updateSystemPrompt(systemPromptDto)
     }
 
+    fun resetContext() {
+        contextResetProvider.resetContext()
+    }
+
     private fun formatToString(format: ResponseFormat): String {
         return when (format) {
             ResponseFormat.DEFAULT -> "дефолт"
@@ -92,6 +98,7 @@ class SettingsViewModel(
 
     private fun systemPromptToSystemPromptDto(systemPrompt: SystemPrompt): SystemPromptDto {
         return when (systemPrompt) {
+            SystemPrompt.EMPTY -> SystemPromptDto.EMPTY
             SystemPrompt.SPECIFYING_QUESTIONS -> SystemPromptDto.SPECIFYING_QUESTIONS
             SystemPrompt.LOGIC_BY_STEP -> SystemPromptDto.LOGIC_BY_STEP
             SystemPrompt.LOGIC_AGENT_GROUP -> SystemPromptDto.LOGIC_AGENT_GROUP
@@ -101,6 +108,7 @@ class SettingsViewModel(
 
     private fun systemPromptDtoToSystemPrompt(systemPromptDto: SystemPromptDto): SystemPrompt {
         return when (systemPromptDto) {
+            SystemPromptDto.EMPTY -> SystemPrompt.EMPTY
             SystemPromptDto.SPECIFYING_QUESTIONS -> SystemPrompt.SPECIFYING_QUESTIONS
             SystemPromptDto.LOGIC_BY_STEP -> SystemPrompt.LOGIC_BY_STEP
             SystemPromptDto.LOGIC_AGENT_GROUP -> SystemPrompt.LOGIC_AGENT_GROUP

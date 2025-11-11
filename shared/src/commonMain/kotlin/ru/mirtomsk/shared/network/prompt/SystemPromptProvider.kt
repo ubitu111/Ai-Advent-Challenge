@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Manages the current system prompt and provides it as a Flow
  */
 class SystemPromptProvider {
-    private val _systemPrompt = MutableStateFlow(SystemPromptDto.LOGIC_BY_STEP)
+    private val _systemPrompt = MutableStateFlow(SystemPromptDto.EMPTY)
     val systemPrompt: StateFlow<SystemPromptDto> = _systemPrompt.asStateFlow()
 
     fun updateSystemPrompt(systemPrompt: SystemPromptDto) {
