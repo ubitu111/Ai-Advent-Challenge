@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.DropdownMenu
@@ -57,6 +59,7 @@ fun SettingsScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
+                .fillMaxSize(0.9f)
                 .padding(16.dp),
             elevation = 8.dp,
             backgroundColor = MaterialTheme.colors.surface,
@@ -65,147 +68,156 @@ fun SettingsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(24.dp)
             ) {
+                // Fixed header
                 Text(
                     text = "Настройки",
                     style = MaterialTheme.typography.h5,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // Response Format section
-                Text(
-                    text = "Формат ответа",
-                    style = MaterialTheme.typography.subtitle1,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                // Spinner-like dropdown
+                // Scrollable content
                 val density = LocalDensity.current
                 var spinnerWidth by remember { mutableStateOf(0.dp) }
 
-                Box(
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onGloballyPositioned { coordinates ->
-                                spinnerWidth = with(density) { coordinates.size.width.toDp() }
-                            }
-                            .clickable(onClick = { expanded = true })
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
-                                shape = RoundedCornerShape(4.dp)
-                            ),
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colors.surface
+                    // Response Format section
+                    Text(
+                        text = "Формат ответа",
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    // Spinner-like dropdown
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Row(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .onGloballyPositioned { coordinates ->
+                                    spinnerWidth = with(density) { coordinates.size.width.toDp() }
+                                }
+                                .clickable(onClick = { expanded = true })
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ),
+                            shape = RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colors.surface
                         ) {
-                            Text(
-                                text = uiState.responseFormat,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.body1
-                            )
-                            Text("▼")
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = if (spinnerWidth > 0.dp) Modifier.width(spinnerWidth) else Modifier.fillMaxWidth()
-                    ) {
-                        DropdownMenuItem(
-                            onClick = {
-                                viewModel.setResponseFormat("дефолт")
-                                expanded = false
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = uiState.responseFormat,
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.body1
+                                )
+                                Text("▼")
                             }
-                        ) {
-                            Text("дефолт")
                         }
-                        DropdownMenuItem(
-                            onClick = {
-                                viewModel.setResponseFormat("json")
-                                expanded = false
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false },
+                            modifier = if (spinnerWidth > 0.dp) Modifier.width(spinnerWidth) else Modifier.fillMaxWidth()
+                        ) {
+                            DropdownMenuItem(
+                                onClick = {
+                                    viewModel.setResponseFormat("дефолт")
+                                    expanded = false
+                                }
+                            ) {
+                                Text("дефолт")
                             }
-                        ) {
-                            Text("json")
+                            DropdownMenuItem(
+                                onClick = {
+                                    viewModel.setResponseFormat("json")
+                                    expanded = false
+                                }
+                            ) {
+                                Text("json")
+                            }
+                        }
+                    }
+
+                    // Agent Selection section
+                    Text(
+                        text = Strings.AGENT_SELECTION_TITLE,
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    // Radio buttons group for agent type
+                    Column {
+                        AgentType.entries.forEach { agentType ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.setSelectedAgent(agentType) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.selectedAgent == agentType,
+                                    onClick = null
+                                )
+                                Text(
+                                    text = Strings.getAgentName(agentType),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    style = MaterialTheme.typography.body1
+                                )
+                            }
+                        }
+                    }
+
+                    // System Prompt Selection section
+                    Text(
+                        text = Strings.SYSTEM_PROMPT_SELECTION_TITLE,
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    // Radio buttons group for system prompt
+                    Column {
+                        SystemPrompt.entries.forEach { systemPrompt ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.setSelectedSystemPrompt(systemPrompt) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = uiState.selectedSystemPrompt == systemPrompt,
+                                    onClick = null
+                                )
+                                Text(
+                                    text = Strings.getSystemPromptName(systemPrompt),
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    style = MaterialTheme.typography.body1
+                                )
+                            }
                         }
                     }
                 }
 
-                // Agent Selection section
-                Text(
-                    text = Strings.AGENT_SELECTION_TITLE,
-                    style = MaterialTheme.typography.subtitle1,
-                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                )
-
-                // Radio buttons group for agent type
-                Column {
-                    AgentType.entries.forEach { agentType ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.setSelectedAgent(agentType) }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = uiState.selectedAgent == agentType,
-                                onClick = null
-                            )
-                            Text(
-                                text = Strings.getAgentName(agentType),
-                                modifier = Modifier.padding(start = 8.dp),
-                                style = MaterialTheme.typography.body1
-                            )
-                        }
-                    }
-                }
-
-                // System Prompt Selection section
-                Text(
-                    text = Strings.SYSTEM_PROMPT_SELECTION_TITLE,
-                    style = MaterialTheme.typography.subtitle1,
-                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                )
-
-                // Radio buttons group for system prompt
-                Column {
-                    SystemPrompt.entries.forEach { systemPrompt ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.setSelectedSystemPrompt(systemPrompt) }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = uiState.selectedSystemPrompt == systemPrompt,
-                                onClick = null
-                            )
-                            Text(
-                                text = Strings.getSystemPromptName(systemPrompt),
-                                modifier = Modifier.padding(start = 8.dp),
-                                style = MaterialTheme.typography.body1
-                            )
-                        }
-                    }
-                }
-
-                // Reset Context button
+                // Fixed buttons at bottom
                 Button(
                     onClick = { viewModel.resetContext() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 24.dp)
+                        .padding(top = 16.dp)
                 ) {
                     Text(Strings.RESET_CONTEXT_BUTTON)
                 }
