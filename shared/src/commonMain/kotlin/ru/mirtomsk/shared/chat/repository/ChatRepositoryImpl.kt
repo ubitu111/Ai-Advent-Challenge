@@ -144,7 +144,7 @@ class ChatRepositoryImpl(
             ResponseFormat.DEFAULT -> Prompts.DEFAULT_FORMAT_RESPONSE
             ResponseFormat.JSON -> Prompts.JSON_FORMAT_RESPONSE
         }
-        return "$basePrompt\n\n$formatPrompt"
+        return "$basePrompt$formatPrompt"
     }
 
     private fun getModel(agentType: AgentTypeDto): String {

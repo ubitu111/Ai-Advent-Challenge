@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.Button
 import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
@@ -35,10 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.mirtomsk.shared.clipboard.createClipboardHelper
 import ru.mirtomsk.shared.chat.model.Message
 import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.model.MessageContent
+import ru.mirtomsk.shared.clipboard.createClipboardHelper
 import ru.mirtomsk.shared.di.koinInject
 import ru.mirtomsk.shared.settings.SettingsScreen
 
@@ -96,7 +97,7 @@ fun ChatScreen(
                         MessageBubble(message = message)
                     }
                 }
-                
+
                 // Show loading bubble if loading
                 if (uiState.isLoading) {
                     item {
@@ -142,7 +143,7 @@ fun ChatScreen(
                 }
             }
         }
-        
+
         // Settings modal dialog - overlays on top
         if (uiState.isSettingsOpen) {
             SettingsScreen(
@@ -192,16 +193,19 @@ private fun MessageBubble(message: Message) {
     ) {
         when (val content = message.content) {
             is MessageContent.Text -> {
-                Text(
-                    text = content.value,
-                    modifier = Modifier.padding(12.dp),
-                    color = if (isUser) {
-                        MaterialTheme.colors.onPrimary
-                    } else {
-                        MaterialTheme.colors.onSurface
-                    }
-                )
+                SelectionContainer {
+                    Text(
+                        text = content.value,
+                        modifier = Modifier.padding(12.dp),
+                        color = if (isUser) {
+                            MaterialTheme.colors.onPrimary
+                        } else {
+                            MaterialTheme.colors.onSurface
+                        }
+                    )
+                }
             }
+
             is MessageContent.Structured -> {
                 if (!isUser) {
                     StructuredMessageContent(
@@ -210,11 +214,13 @@ private fun MessageBubble(message: Message) {
                     )
                 } else {
                     // Fallback for user messages with structured content (shouldn't happen)
-                    Text(
-                        text = content.text,
-                        modifier = Modifier.padding(12.dp),
-                        color = MaterialTheme.colors.onPrimary
-                    )
+                    SelectionContainer {
+                        Text(
+                            text = content.text,
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colors.onPrimary
+                        )
+                    }
                 }
             }
         }
@@ -227,56 +233,58 @@ private fun StructuredMessageContent(
     modifier: Modifier = Modifier
 ) {
     val clipboardHelper = createClipboardHelper()
-    
-    Column(modifier = modifier) {
-        // Title - larger and bold, green color
-        Text(
-            text = content.title,
-            style = MaterialTheme.typography.h6.copy(
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            color = Color(0xFF4CAF50), // Green color
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        
-        // Main text - keep as is
-        Text(
-            text = content.text,
-            style = MaterialTheme.typography.body1,
-            color = MaterialTheme.colors.onSurface,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        
-        // Links section
-        if (content.links.isNotEmpty()) {
+
+    SelectionContainer {
+        Column(modifier = modifier) {
+            // Title - larger and bold, green color
             Text(
-                text = "Ссылки:",
-                style = MaterialTheme.typography.body2,
-                color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.padding(bottom = 4.dp)
+                text = content.title,
+                style = MaterialTheme.typography.h6.copy(
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color(0xFF4CAF50), // Green color
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-            
-            content.links.forEach { link ->
+
+            // Main text - keep as is
+            Text(
+                text = content.text,
+                style = MaterialTheme.typography.body1,
+                color = MaterialTheme.colors.onSurface,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            // Links section
+            if (content.links.isNotEmpty()) {
                 Text(
-                    text = link,
+                    text = "Ссылки:",
                     style = MaterialTheme.typography.body2,
-                    color = Color(0xFF2196F3), // Blue color
-                    textDecoration = TextDecoration.Underline,
-                    modifier = Modifier
-                        .clickable {
-                            clipboardHelper.copyToClipboard(link)
-                        }
-                        .padding(vertical = 2.dp)
+                    color = MaterialTheme.colors.onSurface,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                content.links.forEach { link ->
+                    Text(
+                        text = link,
+                        style = MaterialTheme.typography.body2,
+                        color = Color(0xFF2196F3), // Blue color
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier
+                            .clickable {
+                                clipboardHelper.copyToClipboard(link)
+                            }
+                            .padding(vertical = 2.dp)
+                    )
+                }
+            } else {
+                Text(
+                    text = "Ссылки отсутствуют",
+                    style = MaterialTheme.typography.body2,
+                    color = MaterialTheme.colors.onSurface,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
-        } else {
-            Text(
-                text = "Ссылки отсутствуют",
-                style = MaterialTheme.typography.body2,
-                color = MaterialTheme.colors.onSurface,
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
     }
 }
