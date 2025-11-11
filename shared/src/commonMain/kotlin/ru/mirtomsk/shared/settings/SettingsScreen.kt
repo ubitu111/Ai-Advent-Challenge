@@ -17,6 +17,7 @@ import androidx.compose.material.Card
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.RadioButton
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -73,7 +74,7 @@ fun SettingsScreen(
             ) {
                 // Fixed header
                 Text(
-                    text = "Настройки",
+                    text = Strings.SETTINGS_TITLE,
                     style = MaterialTheme.typography.h5,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -89,7 +90,7 @@ fun SettingsScreen(
                 ) {
                     // Response Format section
                     Text(
-                        text = "Формат ответа",
+                        text = Strings.RESPONSE_FORMAT_TITLE,
                         style = MaterialTheme.typography.subtitle1,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -124,7 +125,7 @@ fun SettingsScreen(
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.body1
                                 )
-                                Text("▼")
+                                Text(Strings.DROPDOWN_ARROW)
                             }
                         }
                         DropdownMenu(
@@ -134,22 +135,37 @@ fun SettingsScreen(
                         ) {
                             DropdownMenuItem(
                                 onClick = {
-                                    viewModel.setResponseFormat("дефолт")
+                                    viewModel.setResponseFormat(Strings.DEFAULT_FORMAT)
                                     expanded = false
                                 }
                             ) {
-                                Text("дефолт")
+                                Text(Strings.DEFAULT_FORMAT)
                             }
                             DropdownMenuItem(
                                 onClick = {
-                                    viewModel.setResponseFormat("json")
+                                    viewModel.setResponseFormat(Strings.JSON_FORMAT)
                                     expanded = false
                                 }
                             ) {
-                                Text("json")
+                                Text(Strings.JSON_FORMAT)
                             }
                         }
                     }
+
+                    // Temperature section
+                    Text(
+                        text = Strings.TEMPERATURE_TITLE,
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.temperature,
+                        onValueChange = { viewModel.setTemperature(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text(Strings.TEMPERATURE_PLACEHOLDER) }
+                    )
 
                     // Agent Selection section
                     Text(
@@ -228,7 +244,7 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(top = 16.dp)
                 ) {
-                    Text("Закрыть")
+                    Text(Strings.CLOSE_BUTTON)
                 }
             }
         }

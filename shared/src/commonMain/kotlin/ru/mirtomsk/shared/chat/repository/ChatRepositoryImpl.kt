@@ -18,6 +18,7 @@ import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
+import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 
 /**
  * Implementation of ChatRepository using ChatApiService
@@ -31,6 +32,7 @@ class ChatRepositoryImpl(
     private val agentTypeProvider: AgentTypeProvider,
     private val systemPromptProvider: SystemPromptProvider,
     private val contextResetProvider: ContextResetProvider,
+    private val temperatureProvider: TemperatureProvider,
 ) : ChatRepository {
 
     // Кеш истории общения в оперативной памяти
@@ -44,10 +46,11 @@ class ChatRepositoryImpl(
         text: String
     ): AiMessage? {
         return withContext(ioDispatcher) {
-            // Get current format, agent type, system prompt and reset counter from providers
+            // Get current format, agent type, system prompt, temperature and reset counter from providers
             val format = formatProvider.responseFormat.first()
             val agentType = agentTypeProvider.agentType.first()
             val systemPrompt = systemPromptProvider.systemPrompt.first()
+            val temperature = temperatureProvider.temperature.first()
             val resetCounter = contextResetProvider.resetCounter.first()
 
             cacheMutex.withLock {
@@ -91,7 +94,7 @@ class ChatRepositoryImpl(
                     modelUri = "gpt://${apiConfig.keyId}/${getModel(agentType)}",
                     completionOptions = AiRequest.CompletionOptions(
                         stream = true,
-                        temperature = 0.6f,
+                        temperature = temperature,
                         maxTokens = 2000,
                     ),
                     messages = conversationCache,

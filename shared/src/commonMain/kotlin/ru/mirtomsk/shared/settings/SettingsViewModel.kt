@@ -15,15 +15,18 @@ import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
+import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
+import ru.mirtomsk.shared.settings.Strings
 
 class SettingsViewModel(
     private val formatProvider: ResponseFormatProvider,
     private val agentTypeProvider: AgentTypeProvider,
     private val systemPromptProvider: SystemPromptProvider,
     private val contextResetProvider: ContextResetProvider,
+    private val temperatureProvider: TemperatureProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -32,15 +35,17 @@ class SettingsViewModel(
         private set
 
     init {
-        // Initialize UI state with current format, agent type and system prompt from providers
+        // Initialize UI state with current format, agent type, system prompt and temperature from providers
         viewmodelScope.launch {
             val currentFormat = formatProvider.responseFormat.first()
             val currentAgentType = agentTypeProvider.agentType.first()
             val currentSystemPrompt = systemPromptProvider.systemPrompt.first()
+            val currentTemperature = temperatureProvider.temperature.first()
             uiState = uiState.copy(
                 responseFormat = formatToString(currentFormat),
                 selectedAgent = agentTypeDtoToAgentType(currentAgentType),
-                selectedSystemPrompt = systemPromptDtoToSystemPrompt(currentSystemPrompt)
+                selectedSystemPrompt = systemPromptDtoToSystemPrompt(currentSystemPrompt),
+                temperature = currentTemperature.toString()
             )
         }
     }
@@ -67,17 +72,23 @@ class SettingsViewModel(
         contextResetProvider.resetContext()
     }
 
+    fun setTemperature(temperatureString: String) {
+        uiState = uiState.copy(temperature = temperatureString)
+        val temperature = temperatureString.toFloatOrNull() ?: 0f
+        temperatureProvider.updateTemperature(temperature)
+    }
+
     private fun formatToString(format: ResponseFormat): String {
         return when (format) {
-            ResponseFormat.DEFAULT -> "дефолт"
-            ResponseFormat.JSON -> "json"
+            ResponseFormat.DEFAULT -> Strings.DEFAULT_FORMAT
+            ResponseFormat.JSON -> Strings.JSON_FORMAT
         }
     }
 
     private fun stringToFormat(formatString: String): ResponseFormat {
         return when (formatString) {
-            "дефолт" -> ResponseFormat.DEFAULT
-            "json" -> ResponseFormat.JSON
+            Strings.DEFAULT_FORMAT -> ResponseFormat.DEFAULT
+            Strings.JSON_FORMAT -> ResponseFormat.JSON
             else -> ResponseFormat.DEFAULT
         }
     }

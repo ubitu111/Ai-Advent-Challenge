@@ -4,6 +4,21 @@ import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SystemPrompt
 
 object Strings {
+    // Settings screen
+    const val SETTINGS_TITLE = "Настройки"
+    const val RESPONSE_FORMAT_TITLE = "Формат ответа"
+    const val TEMPERATURE_TITLE = "Температура"
+    const val TEMPERATURE_PLACEHOLDER = "0.0 - 1.0"
+    const val CLOSE_BUTTON = "Закрыть"
+    const val DROPDOWN_ARROW = "▼"
+    
+    // Response format options
+    const val DEFAULT_FORMAT = "дефолт"
+    const val JSON_FORMAT = "json"
+    
+    // Default values
+    const val DEFAULT_TEMPERATURE = "0"
+    
     // Agent selection
     const val AGENT_SELECTION_TITLE = "Выбор агента"
     const val LITE = "YandexGpt Lite"
