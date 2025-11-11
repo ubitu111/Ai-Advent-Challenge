@@ -134,7 +134,7 @@ class ChatRepositoryImpl(
 
     private fun selectPrompt(systemPrompt: SystemPromptDto, format: ResponseFormat): String {
         val basePrompt = when (systemPrompt) {
-            SystemPromptDto.EMPTY -> Prompts.EMPTY
+            SystemPromptDto.DEFAULT -> Prompts.DEFAULT
             SystemPromptDto.SPECIFYING_QUESTIONS -> Prompts.SPECIFYING_QUESTIONS
             SystemPromptDto.LOGIC_BY_STEP -> Prompts.LOGIC_BY_STEP
             SystemPromptDto.LOGIC_AGENT_GROUP -> Prompts.LOGIC_GROUP

@@ -19,7 +19,6 @@ import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
-import ru.mirtomsk.shared.settings.Strings
 
 class SettingsViewModel(
     private val formatProvider: ResponseFormatProvider,
@@ -109,7 +108,7 @@ class SettingsViewModel(
 
     private fun systemPromptToSystemPromptDto(systemPrompt: SystemPrompt): SystemPromptDto {
         return when (systemPrompt) {
-            SystemPrompt.EMPTY -> SystemPromptDto.EMPTY
+            SystemPrompt.DEFAULT -> SystemPromptDto.DEFAULT
             SystemPrompt.SPECIFYING_QUESTIONS -> SystemPromptDto.SPECIFYING_QUESTIONS
             SystemPrompt.LOGIC_BY_STEP -> SystemPromptDto.LOGIC_BY_STEP
             SystemPrompt.LOGIC_AGENT_GROUP -> SystemPromptDto.LOGIC_AGENT_GROUP
@@ -119,7 +118,7 @@ class SettingsViewModel(
 
     private fun systemPromptDtoToSystemPrompt(systemPromptDto: SystemPromptDto): SystemPrompt {
         return when (systemPromptDto) {
-            SystemPromptDto.EMPTY -> SystemPrompt.EMPTY
+            SystemPromptDto.DEFAULT -> SystemPrompt.DEFAULT
             SystemPromptDto.SPECIFYING_QUESTIONS -> SystemPrompt.SPECIFYING_QUESTIONS
             SystemPromptDto.LOGIC_BY_STEP -> SystemPrompt.LOGIC_BY_STEP
             SystemPromptDto.LOGIC_AGENT_GROUP -> SystemPrompt.LOGIC_AGENT_GROUP

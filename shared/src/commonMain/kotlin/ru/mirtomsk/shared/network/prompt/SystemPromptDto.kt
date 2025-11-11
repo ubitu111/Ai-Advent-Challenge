@@ -1,7 +1,7 @@
 package ru.mirtomsk.shared.network.prompt
 
 enum class SystemPromptDto {
-    EMPTY,
+    DEFAULT,
     SPECIFYING_QUESTIONS,
     LOGIC_SIMPLE,
     LOGIC_BY_STEP,
