@@ -100,7 +100,7 @@ class SettingsViewModel(
             
             // HuggingFace models - Top level
             AgentType.MISTRAL_7B_INSTRUCT -> AgentTypeDto.MISTRAL_7B_INSTRUCT
-            AgentType.BLOOM_7B1 -> AgentTypeDto.BLOOM_7B1
+            AgentType.OPENAI_OSS_120B -> AgentTypeDto.OPENAI_OSS_120B
             
             // HuggingFace models - Middle level
             AgentType.GPT_J_6B -> AgentTypeDto.GPT_J_6B
@@ -124,7 +124,7 @@ class SettingsViewModel(
             
             // HuggingFace models - Top level
             AgentTypeDto.MISTRAL_7B_INSTRUCT -> AgentType.MISTRAL_7B_INSTRUCT
-            AgentTypeDto.BLOOM_7B1 -> AgentType.BLOOM_7B1
+            AgentTypeDto.OPENAI_OSS_120B -> AgentType.OPENAI_OSS_120B
             
             // HuggingFace models - Middle level
             AgentTypeDto.GPT_J_6B -> AgentType.GPT_J_6B

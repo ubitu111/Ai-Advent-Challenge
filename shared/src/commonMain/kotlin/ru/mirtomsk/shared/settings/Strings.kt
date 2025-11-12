@@ -28,7 +28,7 @@ object Strings {
     
     // HuggingFace models - Top level
     const val MISTRAL_7B_INSTRUCT = "Mistral 7B Instruct"
-    const val BLOOM_7B1 = "BLOOM 7.1B"
+    const val OPENAI_OSS_120B = "OPENAI OSS 120B"
     
     // HuggingFace models - Middle level
     const val GPT_J_6B = "GPT-J 6B"
@@ -64,7 +64,7 @@ object Strings {
             
             // HuggingFace models - Top level
             AgentType.MISTRAL_7B_INSTRUCT -> MISTRAL_7B_INSTRUCT
-            AgentType.BLOOM_7B1 -> BLOOM_7B1
+            AgentType.OPENAI_OSS_120B -> OPENAI_OSS_120B
             
             // HuggingFace models - Middle level
             AgentType.GPT_J_6B -> GPT_J_6B

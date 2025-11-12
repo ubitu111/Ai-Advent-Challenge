@@ -7,7 +7,7 @@ enum class AgentType {
     
     // HuggingFace models - Top level
     MISTRAL_7B_INSTRUCT,
-    BLOOM_7B1,
+    OPENAI_OSS_120B,
     
     // HuggingFace models - Middle level
     GPT_J_6B,

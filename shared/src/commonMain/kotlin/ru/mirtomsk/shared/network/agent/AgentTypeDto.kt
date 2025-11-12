@@ -39,7 +39,7 @@ enum class AgentTypeDto(
         level = ModelLevel.TOP,
     ),
 
-    BLOOM_7B1(
+    OPENAI_OSS_120B(
         modelId = "openai/gpt-oss-120b:fastest",
         level = ModelLevel.TOP,
     ),
