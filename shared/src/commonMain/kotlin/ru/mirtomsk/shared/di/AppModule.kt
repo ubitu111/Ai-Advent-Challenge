@@ -16,8 +16,11 @@ import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
+import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
+import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
@@ -66,6 +69,11 @@ val repositoryModule = module {
             apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
             responseMapper = get(),
+            formatProvider = get<ResponseFormatProvider>(),
+            agentTypeProvider = get<AgentTypeProvider>(),
+            systemPromptProvider = get<SystemPromptProvider>(),
+            contextResetProvider = get<ContextResetProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
         )
     }.bind<ChatRepository>()
 }
@@ -76,6 +84,9 @@ val repositoryModule = module {
 val settingsModule = module {
     single { ResponseFormatProvider() }
     single { AgentTypeProvider() }
+    single { SystemPromptProvider() }
+    single { ContextResetProvider() }
+    single { TemperatureProvider() }
 }
 
 /**
@@ -85,8 +96,6 @@ val viewModelModule = module {
     factory {
         ChatViewModel(
             repository = get<ChatRepository>(),
-            formatProvider = get<ResponseFormatProvider>(),
-            agentTypeProvider = get<AgentTypeProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
@@ -95,6 +104,9 @@ val viewModelModule = module {
         SettingsViewModel(
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
+            systemPromptProvider = get<SystemPromptProvider>(),
+            contextResetProvider = get<ContextResetProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
