@@ -58,11 +58,12 @@ class ChatApiService(
 
     /**
      * Request HuggingFace model and return the raw response body
+     * Uses new Chat API format with messages array
      * Response parsing should be handled by HuggingFaceResponseMapper
      */
     suspend fun requestHuggingFace(
         model: AgentTypeDto,
-        prompt: String,
+        messages: List<HuggingFaceMessage>,
         parameters: HuggingFaceParameters = HuggingFaceParameters(),
     ): String {
         val apiUrl = model.huggingFaceApiUrl
@@ -75,9 +76,12 @@ class ChatApiService(
                 header("Authorization", "Bearer $token")
             }
             setBody(
-                HuggingFaceRequest(
-                    inputs = prompt,
-                    parameters = parameters
+                HuggingFaceChatRequest(
+                    messages = messages,
+                    model = model.modelId,
+                    stream = false,
+                    temperature = parameters.temperature,
+                    max_tokens = parameters.max_new_tokens,
                 )
             )
         }
@@ -91,12 +95,24 @@ class ChatApiService(
 }
 
 /**
- * Request model for HuggingFace Inference API
+ * Request model for HuggingFace Chat API (new format)
  */
 @Serializable
-data class HuggingFaceRequest(
-    val inputs: String,
-    val parameters: HuggingFaceParameters = HuggingFaceParameters(),
+data class HuggingFaceChatRequest(
+    val messages: List<HuggingFaceMessage>,
+    val model: String,
+    val stream: Boolean = false,
+    val temperature: Double? = null,
+    val max_tokens: Int? = null,
+)
+
+/**
+ * Message in HuggingFace Chat API format
+ */
+@Serializable
+data class HuggingFaceMessage(
+    val role: String, // "user", "assistant", "system"
+    val content: String,
 )
 
 /**

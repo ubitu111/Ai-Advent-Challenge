@@ -46,7 +46,7 @@
   - Обучена на диалогах (chat-версия)
   - Высокое качество генерации текста
 - **HuggingFace ID**: `meta-llama/Llama-2-7b-chat-hf`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/meta-llama/Llama-2-7b-chat-hf`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 - **Статус**: Может требовать запрос доступа на HuggingFace
 
 #### **mistralai/Mistral-7B-Instruct-v0.2**
@@ -57,7 +57,7 @@
   - Отличное качество для инструкций и диалогов
   - Хорошо работает с промптами
 - **HuggingFace ID**: `mistralai/Mistral-7B-Instruct-v0.2`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 #### **bigscience/bloom-7b1**
 - **Параметры**: 7.1B
@@ -67,7 +67,7 @@
   - Хорошее качество генерации
   - Открытая и доступная
 - **HuggingFace ID**: `bigscience/bloom-7b1`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/bigscience/bloom-7b1`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 ### 2. Средний уровень (баланс качества и скорости)
 
@@ -79,7 +79,7 @@
   - Открытая альтернатива GPT-3
   - Хорошо работает с кодом
 - **HuggingFace ID**: `EleutherAI/gpt-j-6b`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/EleutherAI/gpt-j-6b`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 #### **microsoft/DialoGPT-medium**
 - **Параметры**: 345M
@@ -89,7 +89,7 @@
   - Средний размер, хорошая скорость
   - Хорошо для чат-приложений
 - **HuggingFace ID**: `microsoft/DialoGPT-medium`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/microsoft/DialoGPT-medium`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 ### 3. Базовый уровень (компактные модели)
 
@@ -101,7 +101,7 @@
   - Быстрая и легкая
   - Хорошо для простых задач
 - **HuggingFace ID**: `gpt2`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/gpt2`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 #### **distilgpt2**
 - **Параметры**: 82M
@@ -111,7 +111,7 @@
   - Очень быстрая
   - Минимальные требования к ресурсам
 - **HuggingFace ID**: `distilgpt2`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/distilgpt2`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 #### **TinyLlama/TinyLlama-1.1B-Chat-v1.0**
 - **Параметры**: 1.1B
@@ -121,7 +121,7 @@
   - Обучена на большом датасете
   - Хороший баланс для базового уровня
 - **HuggingFace ID**: `TinyLlama/TinyLlama-1.1B-Chat-v1.0`
-- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/v1/chat/completions` (model указывается в теле запроса)
 
 ## Рекомендуемая тройка для сравнения
 
@@ -139,43 +139,58 @@
 2. Перейдите в [Settings → Access Tokens](https://huggingface.co/settings/tokens)
 3. Создайте новый токен с правами чтения
 
-### Формат запроса
+### Формат запроса (новый Chat API)
+
+Новый формат использует массив `messages` вместо `inputs`:
 
 ```json
 {
-  "inputs": "Ваш текст для генерации",
-  "parameters": {
-    "max_new_tokens": 100,
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "return_full_text": false
-  }
+  "messages": [
+    {
+      "role": "user",
+      "content": "Ваш текст для генерации"
+    }
+  ],
+  "model": "mistralai/Mistral-7B-Instruct-v0.2",
+  "stream": false,
+  "temperature": 0.7,
+  "max_tokens": 100
 }
 ```
 
 ### Пример запроса (cURL)
 
 ```bash
-curl https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2 \
+curl https://router.huggingface.co/hf-inference/v1/chat/completions \
   -H "Authorization: Bearer YOUR_HF_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "inputs": "Привет, как дела?",
-    "parameters": {
-      "max_new_tokens": 50,
-      "temperature": 0.7
-    }
+    "messages": [
+      {
+        "role": "user",
+        "content": "Привет, как дела?"
+      }
+    ],
+    "model": "mistralai/Mistral-7B-Instruct-v0.2",
+    "stream": false,
+    "temperature": 0.7,
+    "max_tokens": 50
   }'
 ```
 
-### Формат ответа
+### Формат ответа (новый Chat API)
 
 ```json
-[
-  {
-    "generated_text": "Сгенерированный текст модели..."
-  }
-]
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "Сгенерированный текст модели..."
+      }
+    }
+  ]
+}
 ```
 
 ## Примечания

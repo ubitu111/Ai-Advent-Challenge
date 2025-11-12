@@ -18,6 +18,21 @@ enum class AgentTypeDto(
         level = ModelLevel.TOP,
     ),
 
+    SAO10(
+        modelId = "Sao10K/L3-8B-Stheno-v3.2",
+        level = ModelLevel.TOP,
+    ),
+
+    QWEN05B(
+        modelId = "sakalaka/Qwen2.5-0.5B-Instruct-Gensyn-Swarm-snappy_burrowing_skunk",
+        level = ModelLevel.TOP,
+    ),
+
+    QWEN7B(
+        modelId = "Qwen/Qwen2.5-7B-Instruct",
+        level = ModelLevel.TOP,
+    ),
+
     // HuggingFace models - Top level
     MISTRAL_7B_INSTRUCT(
         modelId = "mistralai/Mistral-7B-Instruct-v0.2",
@@ -25,7 +40,7 @@ enum class AgentTypeDto(
     ),
 
     BLOOM_7B1(
-        modelId = "bigscience/bloom-7b1",
+        modelId = "openai/gpt-oss-120b:fastest",
         level = ModelLevel.TOP,
     ),
 
@@ -69,53 +84,16 @@ enum class AgentTypeDto(
         get() = this == LITE || this == PRO
 
     /**
-     * URL для HuggingFace Inference API (только для HuggingFace моделей)
-     * Использует новый router API endpoint вместо устаревшего api-inference.huggingface.co
+     * URL для HuggingFace Chat API (только для HuggingFace моделей)
+     * Использует новый router API endpoint с Chat API форматом
+     * Model указывается в теле запроса, а не в URL
      */
     val huggingFaceApiUrl: String?
         get() = if (isHuggingFace) {
-            "https://router.huggingface.co/hf-inference/models/$modelId"
+            "https://router.huggingface.co/v1/chat/completions"
         } else {
             null
         }
-
-    /**
-     * Получить модели по уровню
-     */
-    companion object {
-
-        fun getByLevel(level: ModelLevel): List<AgentTypeDto> {
-            return entries.filter { it.level == level }
-        }
-
-        /**
-         * Рекомендуемая тройка для сравнения:
-         * - Топ: Mistral или BLOOM
-         * - Средний: GPT-J или DialoGPT
-         * - Базовый: TinyLlama или GPT-2
-         */
-        fun getRecommendedForComparison(): List<AgentTypeDto> {
-            return listOf(
-                MISTRAL_7B_INSTRUCT,  // Топ
-                GPT_J_6B,              // Средний
-                TINYLLAMA_1_1B         // Базовый
-            )
-        }
-
-        /**
-         * Получить все HuggingFace модели
-         */
-        fun getHuggingFaceModels(): List<AgentTypeDto> {
-            return entries.filter { it.isHuggingFace }
-        }
-
-        /**
-         * Получить все Yandex GPT модели
-         */
-        fun getYandexGptModels(): List<AgentTypeDto> {
-            return entries.filter { it.isYandexGpt }
-        }
-    }
 }
 
 /**

@@ -38,6 +38,12 @@ object Strings {
     const val TINYLLAMA_1_1B = "TinyLlama 1.1B Chat"
     const val GPT2 = "GPT-2"
     const val DISTILGPT2 = "DistilGPT-2"
+
+    const val SAO10 = "SAO-10"
+
+    const val QWEN05B = "Qwen-0.5B"
+
+    const val QWEN7B = "Qwen-7B"
     
     // System prompt selection
     const val DEFAULT = "Дефолт"
@@ -68,6 +74,9 @@ object Strings {
             AgentType.TINYLLAMA_1_1B -> TINYLLAMA_1_1B
             AgentType.GPT2 -> GPT2
             AgentType.DISTILGPT2 -> DISTILGPT2
+            AgentType.SAO10 -> SAO10
+            AgentType.QWEN05B -> QWEN05B
+            AgentType.QWEN7B -> QWEN7B
         }
     }
     

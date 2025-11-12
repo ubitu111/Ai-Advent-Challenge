@@ -110,6 +110,9 @@ class SettingsViewModel(
             AgentType.TINYLLAMA_1_1B -> AgentTypeDto.TINYLLAMA_1_1B
             AgentType.GPT2 -> AgentTypeDto.GPT2
             AgentType.DISTILGPT2 -> AgentTypeDto.DISTILGPT2
+            AgentType.SAO10 -> AgentTypeDto.SAO10
+            AgentType.QWEN05B -> AgentTypeDto.QWEN05B
+            AgentType.QWEN7B -> AgentTypeDto.QWEN7B
         }
     }
 
@@ -131,6 +134,9 @@ class SettingsViewModel(
             AgentTypeDto.TINYLLAMA_1_1B -> AgentType.TINYLLAMA_1_1B
             AgentTypeDto.GPT2 -> AgentType.GPT2
             AgentTypeDto.DISTILGPT2 -> AgentType.DISTILGPT2
+            AgentTypeDto.SAO10 -> AgentType.SAO10
+            AgentTypeDto.QWEN05B -> AgentType.QWEN05B
+            AgentTypeDto.QWEN7B -> AgentType.QWEN7B
         }
     }
 

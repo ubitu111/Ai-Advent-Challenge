@@ -13,6 +13,7 @@ import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
+import ru.mirtomsk.shared.network.HuggingFaceMessage
 import ru.mirtomsk.shared.network.HuggingFaceParameters
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
@@ -127,29 +128,33 @@ class ChatRepositoryImpl(
             // Добавляем текущее сообщение пользователя в кеш
             addUserMessage(text)
 
-            // Формируем промпт из истории разговора
-            val prompt = buildHuggingFacePrompt(conversationCache)
+            // Преобразуем кеш в формат HuggingFace messages
+            val messages = conversationCache.map { message ->
+                HuggingFaceMessage(
+                    role = when (message.role) {
+                        MessageRoleDto.USER -> "user"
+                        MessageRoleDto.ASSISTANT -> "assistant"
+                        MessageRoleDto.SYSTEM -> "system"
+                    },
+                    content = message.text
+                )
+            }
 
             // Формируем параметры запроса
             val parameters = HuggingFaceParameters(
                 max_new_tokens = 200,
                 temperature = temperature.toDouble(),
-                top_p = 0.9,
-                return_full_text = false,
             )
 
             // Отправляем запрос и получаем сырой ответ
             val rawResponse = chatApiService.requestHuggingFace(
                 model = agentType,
-                prompt = prompt,
+                messages = messages,
                 parameters = parameters,
             )
 
             // Парсим ответ через маппер
-            val responseText = huggingFaceResponseMapper.mapResponseBody(rawResponse)
-
-            // Извлекаем сгенерированный текст
-            val generatedText = extractGeneratedText(responseText, prompt)
+            val generatedText = huggingFaceResponseMapper.mapResponseBody(rawResponse)
 
             // Добавляем сообщение ассистента в кеш
             addAssistantMessage(generatedText)
@@ -283,30 +288,6 @@ class ChatRepositoryImpl(
         }
     }
 
-    /**
-     * Формирует промпт из истории разговора для HuggingFace
-     */
-    private fun buildHuggingFacePrompt(messages: List<AiRequest.Message>): String {
-        return messages.joinToString("\n") { message ->
-            when (message.role) {
-                MessageRoleDto.USER -> "User: ${message.text}"
-                MessageRoleDto.ASSISTANT -> "Assistant: ${message.text}"
-                MessageRoleDto.SYSTEM -> "System: ${message.text}"
-            }
-        } + "\nAssistant:"
-    }
-
-    /**
-     * Извлекает сгенерированный текст из ответа HuggingFace
-     */
-    private fun extractGeneratedText(responseText: String, prompt: String): String {
-        // Если ответ начинается с промпта, удаляем его
-        return if (responseText.startsWith(prompt)) {
-            responseText.removePrefix(prompt).trim()
-        } else {
-            responseText.trim()
-        }
-    }
 
     private companion object {
         const val MODEL_LITE = "yandexgpt-lite"

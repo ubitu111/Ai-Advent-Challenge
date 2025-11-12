@@ -17,4 +17,8 @@ enum class AgentType {
     TINYLLAMA_1_1B,
     GPT2,
     DISTILGPT2,
+
+    SAO10,
+    QWEN05B,
+    QWEN7B,
 }
