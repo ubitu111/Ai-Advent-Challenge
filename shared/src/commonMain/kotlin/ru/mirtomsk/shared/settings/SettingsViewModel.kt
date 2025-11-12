@@ -94,15 +94,43 @@ class SettingsViewModel(
 
     private fun agentTypeToAgentTypeDto(agentType: AgentType): AgentTypeDto {
         return when (agentType) {
+            // Yandex GPT models
             AgentType.LITE -> AgentTypeDto.LITE
             AgentType.PRO -> AgentTypeDto.PRO
+            
+            // HuggingFace models - Top level
+            AgentType.MISTRAL_7B_INSTRUCT -> AgentTypeDto.MISTRAL_7B_INSTRUCT
+            AgentType.BLOOM_7B1 -> AgentTypeDto.BLOOM_7B1
+            
+            // HuggingFace models - Middle level
+            AgentType.GPT_J_6B -> AgentTypeDto.GPT_J_6B
+            AgentType.DIALOGPT_MEDIUM -> AgentTypeDto.DIALOGPT_MEDIUM
+            
+            // HuggingFace models - Basic level
+            AgentType.TINYLLAMA_1_1B -> AgentTypeDto.TINYLLAMA_1_1B
+            AgentType.GPT2 -> AgentTypeDto.GPT2
+            AgentType.DISTILGPT2 -> AgentTypeDto.DISTILGPT2
         }
     }
 
     private fun agentTypeDtoToAgentType(agentTypeDto: AgentTypeDto): AgentType {
         return when (agentTypeDto) {
+            // Yandex GPT models
             AgentTypeDto.LITE -> AgentType.LITE
             AgentTypeDto.PRO -> AgentType.PRO
+            
+            // HuggingFace models - Top level
+            AgentTypeDto.MISTRAL_7B_INSTRUCT -> AgentType.MISTRAL_7B_INSTRUCT
+            AgentTypeDto.BLOOM_7B1 -> AgentType.BLOOM_7B1
+            
+            // HuggingFace models - Middle level
+            AgentTypeDto.GPT_J_6B -> AgentType.GPT_J_6B
+            AgentTypeDto.DIALOGPT_MEDIUM -> AgentType.DIALOGPT_MEDIUM
+            
+            // HuggingFace models - Basic level
+            AgentTypeDto.TINYLLAMA_1_1B -> AgentType.TINYLLAMA_1_1B
+            AgentTypeDto.GPT2 -> AgentType.GPT2
+            AgentTypeDto.DISTILGPT2 -> AgentType.DISTILGPT2
         }
     }
 

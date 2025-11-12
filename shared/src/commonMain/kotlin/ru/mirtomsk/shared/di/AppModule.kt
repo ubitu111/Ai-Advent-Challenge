@@ -9,6 +9,7 @@ import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
@@ -22,6 +23,8 @@ import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
+import ru.mirtomsk.shared.network.huggingface.HuggingFaceApiService
+import ru.mirtomsk.shared.chat.repository.HuggingFaceChatRepository
 
 /**
  * Configuration module for API keys
@@ -30,7 +33,8 @@ val configModule = module {
     single<ApiConfig> {
         ApiConfigImpl(
             apiKey = ApiConfigReader.readApiKey(),
-            keyId = ApiConfigReader.readKeyId()
+            keyId = ApiConfigReader.readKeyId(),
+            huggingFaceToken = ApiConfigReader.readHuggingFaceToken()
         )
     }
 }
@@ -43,6 +47,13 @@ val networkModule = module {
 
     single {
         ChatApiService(
+            httpClient = get(),
+            apiConfig = get(),
+        )
+    }
+
+    single {
+        HuggingFaceApiService(
             httpClient = get(),
             apiConfig = get(),
         )
@@ -64,6 +75,12 @@ val repositoryModule = module {
     }
 
     single {
+        HuggingFaceResponseMapper(
+            json = get()
+        )
+    }
+
+    single {
         ChatRepositoryImpl(
             chatApiService = get(),
             apiConfig = get(),
@@ -76,6 +93,17 @@ val repositoryModule = module {
             temperatureProvider = get<TemperatureProvider>(),
         )
     }.bind<ChatRepository>()
+
+    single {
+        HuggingFaceChatRepository(
+            huggingFaceApiService = get(),
+            responseMapper = get<HuggingFaceResponseMapper>(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            agentTypeProvider = get<AgentTypeProvider>(),
+            contextResetProvider = get<ContextResetProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+        )
+    }
 }
 
 /**

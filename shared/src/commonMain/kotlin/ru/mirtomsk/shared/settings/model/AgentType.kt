@@ -1,6 +1,20 @@
 package ru.mirtomsk.shared.settings.model
 
 enum class AgentType {
+    // Yandex GPT models
     LITE,
-    PRO
+    PRO,
+    
+    // HuggingFace models - Top level
+    MISTRAL_7B_INSTRUCT,
+    BLOOM_7B1,
+    
+    // HuggingFace models - Middle level
+    GPT_J_6B,
+    DIALOGPT_MEDIUM,
+    
+    // HuggingFace models - Basic level
+    TINYLLAMA_1_1B,
+    GPT2,
+    DISTILGPT2,
 }
