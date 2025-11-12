@@ -70,10 +70,11 @@ enum class AgentTypeDto(
 
     /**
      * URL для HuggingFace Inference API (только для HuggingFace моделей)
+     * Использует новый router API endpoint вместо устаревшего api-inference.huggingface.co
      */
     val huggingFaceApiUrl: String?
         get() = if (isHuggingFace) {
-            "https://api-inference.huggingface.co/models/$modelId"
+            "https://router.huggingface.co/hf-inference/models/$modelId"
         } else {
             null
         }

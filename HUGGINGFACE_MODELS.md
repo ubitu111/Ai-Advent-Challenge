@@ -46,7 +46,7 @@
   - Обучена на диалогах (chat-версия)
   - Высокое качество генерации текста
 - **HuggingFace ID**: `meta-llama/Llama-2-7b-chat-hf`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/meta-llama/Llama-2-7b-chat-hf`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/meta-llama/Llama-2-7b-chat-hf`
 - **Статус**: Может требовать запрос доступа на HuggingFace
 
 #### **mistralai/Mistral-7B-Instruct-v0.2**
@@ -57,7 +57,7 @@
   - Отличное качество для инструкций и диалогов
   - Хорошо работает с промптами
 - **HuggingFace ID**: `mistralai/Mistral-7B-Instruct-v0.2`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2`
 
 #### **bigscience/bloom-7b1**
 - **Параметры**: 7.1B
@@ -67,7 +67,7 @@
   - Хорошее качество генерации
   - Открытая и доступная
 - **HuggingFace ID**: `bigscience/bloom-7b1`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/bigscience/bloom-7b1`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/bigscience/bloom-7b1`
 
 ### 2. Средний уровень (баланс качества и скорости)
 
@@ -79,7 +79,7 @@
   - Открытая альтернатива GPT-3
   - Хорошо работает с кодом
 - **HuggingFace ID**: `EleutherAI/gpt-j-6b`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6b`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/EleutherAI/gpt-j-6b`
 
 #### **microsoft/DialoGPT-medium**
 - **Параметры**: 345M
@@ -89,7 +89,7 @@
   - Средний размер, хорошая скорость
   - Хорошо для чат-приложений
 - **HuggingFace ID**: `microsoft/DialoGPT-medium`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/microsoft/DialoGPT-medium`
 
 ### 3. Базовый уровень (компактные модели)
 
@@ -101,7 +101,7 @@
   - Быстрая и легкая
   - Хорошо для простых задач
 - **HuggingFace ID**: `gpt2`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/gpt2`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/gpt2`
 
 #### **distilgpt2**
 - **Параметры**: 82M
@@ -111,7 +111,7 @@
   - Очень быстрая
   - Минимальные требования к ресурсам
 - **HuggingFace ID**: `distilgpt2`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/distilgpt2`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/distilgpt2`
 
 #### **TinyLlama/TinyLlama-1.1B-Chat-v1.0**
 - **Параметры**: 1.1B
@@ -121,7 +121,7 @@
   - Обучена на большом датасете
   - Хороший баланс для базового уровня
 - **HuggingFace ID**: `TinyLlama/TinyLlama-1.1B-Chat-v1.0`
-- **API Endpoint**: `https://api-inference.huggingface.co/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+- **API Endpoint**: `https://router.huggingface.co/hf-inference/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0`
 
 ## Рекомендуемая тройка для сравнения
 
@@ -156,7 +156,7 @@
 ### Пример запроса (cURL)
 
 ```bash
-curl https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2 \
+curl https://router.huggingface.co/hf-inference/models/mistralai/Mistral-7B-Instruct-v0.2 \
   -H "Authorization: Bearer YOUR_HF_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -180,6 +180,7 @@ curl https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v
 
 ## Примечания
 
+- **Новый API endpoint**: Используется новый router API (`https://router.huggingface.co/hf-inference`) вместо устаревшего `https://api-inference.huggingface.co`
 - **Бесплатный тариф**: HuggingFace Inference API предоставляет бесплатный доступ, но с ограничениями по количеству запросов
 - **Cold start**: При первом запросе модель может загружаться (cold start), что занимает время
 - **Очередь**: На бесплатном тарифе запросы могут попадать в очередь

@@ -23,8 +23,6 @@ import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
-import ru.mirtomsk.shared.network.huggingface.HuggingFaceApiService
-import ru.mirtomsk.shared.chat.repository.HuggingFaceChatRepository
 
 /**
  * Configuration module for API keys
@@ -47,13 +45,6 @@ val networkModule = module {
 
     single {
         ChatApiService(
-            httpClient = get(),
-            apiConfig = get(),
-        )
-    }
-
-    single {
-        HuggingFaceApiService(
             httpClient = get(),
             apiConfig = get(),
         )
@@ -85,7 +76,8 @@ val repositoryModule = module {
             chatApiService = get(),
             apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
-            responseMapper = get(),
+            yandexResponseMapper = get<AiResponseMapper>(),
+            huggingFaceResponseMapper = get<HuggingFaceResponseMapper>(),
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
             systemPromptProvider = get<SystemPromptProvider>(),
@@ -93,17 +85,6 @@ val repositoryModule = module {
             temperatureProvider = get<TemperatureProvider>(),
         )
     }.bind<ChatRepository>()
-
-    single {
-        HuggingFaceChatRepository(
-            huggingFaceApiService = get(),
-            responseMapper = get<HuggingFaceResponseMapper>(),
-            ioDispatcher = get<DispatchersProvider>().io,
-            agentTypeProvider = get<AgentTypeProvider>(),
-            contextResetProvider = get<ContextResetProvider>(),
-            temperatureProvider = get<TemperatureProvider>(),
-        )
-    }
 }
 
 /**

@@ -2,9 +2,7 @@ package ru.mirtomsk.shared.chat.repository.mapper
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.decodeFromString
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.parseToJsonElement
 
 /**
  * Mapper for converting HuggingFace API response to generated text
@@ -17,7 +15,7 @@ class HuggingFaceResponseMapper(
     /**
      * Parse HuggingFace API response body and extract generated text
      * Handles both array and object response formats
-     * 
+     *
      * @param responseBody Raw response body from HuggingFace API
      * @return Generated text extracted from response
      * @throws Exception if response contains error or cannot be parsed
