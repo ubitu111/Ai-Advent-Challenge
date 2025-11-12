@@ -1,5 +1,6 @@
 package ru.mirtomsk.shared.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -191,37 +193,50 @@ private fun MessageBubble(message: Message) {
             MaterialTheme.colors.surface
         }
     ) {
-        when (val content = message.content) {
-            is MessageContent.Text -> {
-                SelectionContainer {
-                    Text(
-                        text = content.value,
-                        modifier = Modifier.padding(12.dp),
-                        color = if (isUser) {
-                            MaterialTheme.colors.onPrimary
-                        } else {
-                            MaterialTheme.colors.onSurface
-                        }
-                    )
-                }
-            }
-
-            is MessageContent.Structured -> {
-                if (!isUser) {
-                    StructuredMessageContent(
-                        content = content,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                } else {
-                    // Fallback for user messages with structured content (shouldn't happen)
+        Column {
+            when (val content = message.content) {
+                is MessageContent.Text -> {
                     SelectionContainer {
                         Text(
-                            text = content.text,
+                            text = content.value,
                             modifier = Modifier.padding(12.dp),
-                            color = MaterialTheme.colors.onPrimary
+                            color = if (isUser) {
+                                MaterialTheme.colors.onPrimary
+                            } else {
+                                MaterialTheme.colors.onSurface
+                            }
                         )
                     }
                 }
+
+                is MessageContent.Structured -> {
+                    if (!isUser) {
+                        StructuredMessageContent(
+                            content = content,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    } else {
+                        // Fallback for user messages with structured content (shouldn't happen)
+                        SelectionContainer {
+                            Text(
+                                text = content.text,
+                                modifier = Modifier.padding(12.dp),
+                                color = MaterialTheme.colors.onPrimary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Информация о времени выполнения и токенах для сообщений ассистента
+            if (!isUser) {
+                MessageMetadata(
+                    requestTime = message.requestTime,
+                    promptTokens = message.promptTokens,
+                    completionTokens = message.completionTokens,
+                    totalTokens = message.totalTokens,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
         }
     }
@@ -286,5 +301,66 @@ private fun StructuredMessageContent(
                 )
             }
         }
+    }
+}
+
+@Suppress("DefaultLocale")
+@Composable
+private fun MessageMetadata(
+    requestTime: Long,
+    promptTokens: Int?,
+    completionTokens: Int?,
+    totalTokens: Int?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+    ) {
+        // Разделитель
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .padding(vertical = 4.dp)
+                .background(MaterialTheme.colors.onSurface.copy(alpha = 0.2f))
+        )
+
+        // Заголовок
+        Text(
+            text = "Информация",
+            style = MaterialTheme.typography.body2.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colors.onSurface,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        // Время выполнения
+        val timeText = if (requestTime >= 1000) {
+            String.format("%.2f с", requestTime / 1000.0)
+        } else {
+            "$requestTime мс"
+        }
+        Text(
+            text = "Время выполнения: $timeText",
+            style = MaterialTheme.typography.body2,
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(vertical = 2.dp)
+        )
+
+        // Токены
+        val tokensInfo = buildString {
+            append("Промпт: $promptTokens")
+            append(", ")
+            append("Ответ: $completionTokens")
+            append(", ")
+            append("Всего: $totalTokens")
+        }
+        Text(
+            text = "Токены: $tokensInfo",
+            style = MaterialTheme.typography.body2,
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
+            modifier = Modifier.padding(vertical = 2.dp)
+        )
     }
 }
