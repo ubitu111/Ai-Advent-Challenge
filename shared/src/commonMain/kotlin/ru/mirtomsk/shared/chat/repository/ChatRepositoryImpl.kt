@@ -10,6 +10,8 @@ import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
+import ru.mirtomsk.shared.chat.repository.model.AiResponse
+import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
@@ -42,16 +44,16 @@ class ChatRepositoryImpl(
 
     // Единый кеш истории общения для всех моделей
     private val conversationCache = mutableListOf<AiRequest.Message>()
-    
+
     private val cacheMutex = Mutex()
     private var lastAgentType: AgentTypeDto? = null
     private var lastSystemPrompt: SystemPromptDto? = null
     private var lastResetCounter: Long = 0L
 
-    override suspend fun sendMessage(text: String): AiMessage? {
+    override suspend fun sendMessage(text: String): MessageResponseDto? {
         return withContext(ioDispatcher) {
             val agentType = agentTypeProvider.agentType.first()
-            
+
             return@withContext if (agentType.isYandexGpt) {
                 sendMessageYandexGpt(text)
             } else {
@@ -63,7 +65,7 @@ class ChatRepositoryImpl(
     /**
      * Отправка сообщения для Yandex GPT моделей
      */
-    private suspend fun sendMessageYandexGpt(text: String): AiMessage? {
+    private suspend fun sendMessageYandexGpt(text: String): MessageResponseDto? {
         val format = formatProvider.responseFormat.first()
         val agentType = agentTypeProvider.agentType.first()
         val systemPrompt = systemPromptProvider.systemPrompt.first()
@@ -91,6 +93,9 @@ class ChatRepositoryImpl(
             // Добавляем текущее сообщение пользователя в кеш
             addUserMessage(text)
 
+            // Фиксируем время начала запроса
+            val requestStartTime = System.currentTimeMillis()
+
             // Формируем и отправляем запрос
             val request = AiRequest(
                 modelUri = "gpt://${apiConfig.keyId}/${getYandexModel(agentType)}",
@@ -104,15 +109,35 @@ class ChatRepositoryImpl(
             val responseBody = chatApiService.requestYandexGpt(request)
             val response = yandexResponseMapper.mapResponseBody(responseBody, format)
 
+            // Фиксируем время окончания запроса
+            val requestEndTime = System.currentTimeMillis()
+
             // Обрабатываем ответ и добавляем в кеш
-            processYandexResponse(response, format)
+            val assistantMessage = processYandexResponse(response, format)
+
+            // Извлекаем информацию о токенах из ответа
+            val promptTokens = response.result.usage.inputTextTokens.toIntOrNull()
+            val completionTokens = response.result.usage.completionTokens.toIntOrNull()
+            val totalTokens = response.result.usage.totalTokens.toIntOrNull()
+
+            // Возвращаем сообщение с временем запроса и токенами
+            assistantMessage?.let {
+                MessageResponseDto(
+                    role = assistantMessage.role,
+                    text = assistantMessage.text,
+                    requestTime = requestEndTime - requestStartTime,
+                    promptTokens = promptTokens,
+                    completionTokens = completionTokens,
+                    totalTokens = totalTokens,
+                )
+            }
         }
     }
 
     /**
      * Отправка сообщения для HuggingFace моделей
      */
-    private suspend fun sendMessageHuggingFace(text: String): AiMessage? {
+    private suspend fun sendMessageHuggingFace(text: String): MessageResponseDto? {
         val agentType = agentTypeProvider.agentType.first()
         val temperature = temperatureProvider.temperature.first()
         val resetCounter = contextResetProvider.resetCounter.first()
@@ -146,6 +171,9 @@ class ChatRepositoryImpl(
                 temperature = temperature.toDouble(),
             )
 
+            // Фиксируем время начала запроса
+            val requestStartTime = System.currentTimeMillis()
+
             // Отправляем запрос и получаем сырой ответ
             val rawResponse = chatApiService.requestHuggingFace(
                 model = agentType,
@@ -154,15 +182,22 @@ class ChatRepositoryImpl(
             )
 
             // Парсим ответ через маппер
-            val generatedText = huggingFaceResponseMapper.mapResponseBody(rawResponse)
+            val huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
+
+            // Фиксируем время окончания запроса
+            val requestEndTime = System.currentTimeMillis()
 
             // Добавляем сообщение ассистента в кеш
-            addAssistantMessage(generatedText)
+            addAssistantMessage(huggingFaceResponse.content)
 
-            // Возвращаем сообщение в формате AiMessage
-            AiMessage(
+            // Возвращаем сообщение в формате AiMessage с временем запроса и токенами
+            MessageResponseDto(
                 role = MessageRoleDto.ASSISTANT,
-                text = AiMessage.MessageContent.Text(generatedText),
+                text = AiMessage.MessageContent.Text(huggingFaceResponse.content),
+                requestTime = requestEndTime - requestStartTime,
+                promptTokens = huggingFaceResponse.promptTokens,
+                completionTokens = huggingFaceResponse.completionTokens,
+                totalTokens = huggingFaceResponse.totalTokens,
             )
         }
     }
@@ -232,7 +267,7 @@ class ChatRepositoryImpl(
      * Обработка ответа Yandex GPT и добавление в кеш
      */
     private fun processYandexResponse(
-        response: ru.mirtomsk.shared.chat.repository.model.AiResponse,
+        response: AiResponse,
         format: ResponseFormat
     ): AiMessage? {
         val assistantMessage = response.result.alternatives

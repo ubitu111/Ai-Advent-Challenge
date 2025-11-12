@@ -7,22 +7,32 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Mapper for converting HuggingFace Chat API response to generated text
- * Handles parsing of new Chat API format with choices array
+ * Result of parsing HuggingFace API response
+ */
+data class HuggingFaceResponse(
+    val content: String,
+    val promptTokens: Int? = null,
+    val completionTokens: Int? = null,
+    val totalTokens: Int? = null,
+)
+
+/**
+ * Mapper for converting HuggingFace Chat API response to generated text and usage
+ * Handles parsing of new Chat API format with choices array and usage
  */
 class HuggingFaceResponseMapper(
     private val json: Json
 ) {
 
     /**
-     * Parse HuggingFace Chat API response body and extract generated text
-     * New format: { "choices": [{ "message": { "content": "..." } }] }
+     * Parse HuggingFace Chat API response body and extract generated text and usage
+     * New format: { "choices": [{ "message": { "content": "..." } }], "usage": {...} }
      *
      * @param responseBody Raw response body from HuggingFace API
-     * @return Generated text extracted from response
+     * @return HuggingFaceResponse with content and token usage
      * @throws Exception if response contains error or cannot be parsed
      */
-    fun mapResponseBody(responseBody: String): String {
+    fun mapResponseBody(responseBody: String): HuggingFaceResponse {
         if (responseBody.isBlank()) {
             throw Exception("Empty response from HuggingFace API")
         }
@@ -38,6 +48,12 @@ class HuggingFaceResponseMapper(
                     throw Exception("HuggingFace API error: $error")
                 }
 
+                // Парсим usage из ответа
+                val usage = jsonElement["usage"]?.jsonObject
+                val promptTokens = usage?.get("prompt_tokens")?.jsonPrimitive?.content?.toIntOrNull()
+                val completionTokens = usage?.get("completion_tokens")?.jsonPrimitive?.content?.toIntOrNull()
+                val totalTokens = usage?.get("total_tokens")?.jsonPrimitive?.content?.toIntOrNull()
+
                 // Новый формат Chat API: { "choices": [{ "message": { "content": "..." } }] }
                 val choices = jsonElement["choices"]?.jsonArray
                 if (choices != null && choices.isNotEmpty()) {
@@ -45,14 +61,24 @@ class HuggingFaceResponseMapper(
                     val message = firstChoice["message"]?.jsonObject
                     val content = message?.get("content")?.jsonPrimitive?.content
                     if (content != null) {
-                        return content
+                        return HuggingFaceResponse(
+                            content = content,
+                            promptTokens = promptTokens,
+                            completionTokens = completionTokens,
+                            totalTokens = totalTokens,
+                        )
                     }
                 }
 
                 // Старый формат для обратной совместимости: { "generated_text": "..." }
                 val generatedText = jsonElement["generated_text"]?.jsonPrimitive?.content
                 if (generatedText != null) {
-                    return generatedText
+                    return HuggingFaceResponse(
+                        content = generatedText,
+                        promptTokens = promptTokens,
+                        completionTokens = completionTokens,
+                        totalTokens = totalTokens,
+                    )
                 }
             }
 
@@ -62,7 +88,9 @@ class HuggingFaceResponseMapper(
                 val firstItem = array.first()
                 val generatedText = firstItem["generated_text"]?.jsonPrimitive?.content
                 if (generatedText != null) {
-                    return generatedText
+                    return HuggingFaceResponse(
+                        content = generatedText,
+                    )
                 }
             }
 
