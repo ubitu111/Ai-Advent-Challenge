@@ -24,6 +24,7 @@ import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
+import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 
 /**
  * Unified implementation of ChatRepository for all AI models (Yandex GPT and HuggingFace)
@@ -40,6 +41,7 @@ class ChatRepositoryImpl(
     private val systemPromptProvider: SystemPromptProvider,
     private val contextResetProvider: ContextResetProvider,
     private val temperatureProvider: TemperatureProvider,
+    private val maxTokensProvider: MaxTokensProvider,
 ) : ChatRepository {
 
     // Единый кеш истории общения для всех моделей
@@ -71,6 +73,7 @@ class ChatRepositoryImpl(
         val agentType = agentTypeProvider.agentType.first()
         val systemPrompt = systemPromptProvider.systemPrompt.first()
         val temperature = temperatureProvider.temperature.first()
+        val maxTokens = maxTokensProvider.maxTokens.first()
         val resetCounter = contextResetProvider.resetCounter.first()
 
         return cacheMutex.withLock {
@@ -103,7 +106,7 @@ class ChatRepositoryImpl(
                 completionOptions = AiRequest.CompletionOptions(
                     stream = true,
                     temperature = temperature,
-                    maxTokens = 2000,
+                    maxTokens = maxTokens,
                 ),
                 messages = conversationCache,
             )
@@ -142,6 +145,7 @@ class ChatRepositoryImpl(
     private suspend fun sendMessageHuggingFace(text: String): MessageResponseDto? {
         val agentType = agentTypeProvider.agentType.first()
         val temperature = temperatureProvider.temperature.first()
+        val maxTokens = maxTokensProvider.maxTokens.first()
         val resetCounter = contextResetProvider.resetCounter.first()
 
         return cacheMutex.withLock {
@@ -169,7 +173,7 @@ class ChatRepositoryImpl(
 
             // Формируем параметры запроса
             val parameters = HuggingFaceParameters(
-                max_new_tokens = 200,
+                max_new_tokens = maxTokens,
                 temperature = temperature.toDouble(),
             )
 

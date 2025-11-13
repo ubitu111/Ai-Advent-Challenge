@@ -22,6 +22,7 @@ import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
+import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
@@ -83,6 +84,7 @@ val repositoryModule = module {
             systemPromptProvider = get<SystemPromptProvider>(),
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
         )
     }.bind<ChatRepository>()
 }
@@ -96,6 +98,7 @@ val settingsModule = module {
     single { SystemPromptProvider() }
     single { ContextResetProvider() }
     single { TemperatureProvider() }
+    single { MaxTokensProvider() }
 }
 
 /**
@@ -116,6 +119,7 @@ val viewModelModule = module {
             systemPromptProvider = get<SystemPromptProvider>(),
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

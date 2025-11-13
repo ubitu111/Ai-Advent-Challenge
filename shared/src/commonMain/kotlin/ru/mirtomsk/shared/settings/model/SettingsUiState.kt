@@ -7,4 +7,5 @@ data class SettingsUiState(
     val selectedAgent: AgentType = AgentType.LITE,
     val selectedSystemPrompt: SystemPrompt = SystemPrompt.DEFAULT,
     val temperature: String = Strings.DEFAULT_TEMPERATURE,
+    val maxTokens: String = Strings.DEFAULT_MAX_TOKENS,
 )

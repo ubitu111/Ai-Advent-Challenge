@@ -16,6 +16,7 @@ import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
+import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
@@ -26,6 +27,7 @@ class SettingsViewModel(
     private val systemPromptProvider: SystemPromptProvider,
     private val contextResetProvider: ContextResetProvider,
     private val temperatureProvider: TemperatureProvider,
+    private val maxTokensProvider: MaxTokensProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -34,17 +36,19 @@ class SettingsViewModel(
         private set
 
     init {
-        // Initialize UI state with current format, agent type, system prompt and temperature from providers
+        // Initialize UI state with current format, agent type, system prompt, temperature and max tokens from providers
         viewmodelScope.launch {
             val currentFormat = formatProvider.responseFormat.first()
             val currentAgentType = agentTypeProvider.agentType.first()
             val currentSystemPrompt = systemPromptProvider.systemPrompt.first()
             val currentTemperature = temperatureProvider.temperature.first()
+            val currentMaxTokens = maxTokensProvider.maxTokens.first()
             uiState = uiState.copy(
                 responseFormat = formatToString(currentFormat),
                 selectedAgent = agentTypeDtoToAgentType(currentAgentType),
                 selectedSystemPrompt = systemPromptDtoToSystemPrompt(currentSystemPrompt),
-                temperature = currentTemperature.toString()
+                temperature = currentTemperature.toString(),
+                maxTokens = currentMaxTokens.toString()
             )
         }
     }
@@ -75,6 +79,12 @@ class SettingsViewModel(
         uiState = uiState.copy(temperature = temperatureString)
         val temperature = temperatureString.toFloatOrNull() ?: 0f
         temperatureProvider.updateTemperature(temperature)
+    }
+
+    fun setMaxTokens(maxTokensString: String) {
+        uiState = uiState.copy(maxTokens = maxTokensString)
+        val maxTokens = maxTokensString.toIntOrNull() ?: 2000
+        maxTokensProvider.updateMaxTokens(maxTokens)
     }
 
     private fun formatToString(format: ResponseFormat): String {

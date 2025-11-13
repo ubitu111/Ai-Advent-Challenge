@@ -9,6 +9,8 @@ object Strings {
     const val RESPONSE_FORMAT_TITLE = "Формат ответа"
     const val TEMPERATURE_TITLE = "Температура"
     const val TEMPERATURE_PLACEHOLDER = "0.0 - 1.0"
+    const val MAX_TOKENS_TITLE = "Максимальное количество токенов"
+    const val MAX_TOKENS_PLACEHOLDER = "1 - 100000"
     const val CLOSE_BUTTON = "Закрыть"
     const val DROPDOWN_ARROW = "▼"
 
@@ -18,6 +20,7 @@ object Strings {
 
     // Default values
     const val DEFAULT_TEMPERATURE = "0"
+    const val DEFAULT_MAX_TOKENS = "2000"
 
     // Agent selection
     const val AGENT_SELECTION_TITLE = "Выбор агента"
