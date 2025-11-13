@@ -46,7 +46,6 @@ class ChatRepositoryImpl(
 
     // Единый кеш истории общения для всех моделей
     private val conversationCache = mutableListOf<AiRequest.Message>()
-    private var contextTokens: Int = 0
 
     private val cacheMutex = Mutex()
     private var lastAgentType: AgentTypeDto? = null
@@ -122,8 +121,8 @@ class ChatRepositoryImpl(
             // Извлекаем информацию о токенах из ответа
             val promptTokens = response.result.usage.inputTextTokens.toIntOrNull()
             val completionTokens = response.result.usage.completionTokens.toIntOrNull()
-            val totalResponseTokens = response.result.usage.totalTokens.toIntOrNull()
-            updateContextTokens(totalResponseTokens)
+            val totalTokens = response.result.usage.totalTokens.toIntOrNull()
+
             // Возвращаем сообщение с временем запроса и токенами
             assistantMessage?.let {
                 MessageResponseDto(
@@ -132,8 +131,7 @@ class ChatRepositoryImpl(
                     requestTime = requestEndTime - requestStartTime,
                     promptTokens = promptTokens,
                     completionTokens = completionTokens,
-                    totalResponseTokens = totalResponseTokens,
-                    totalContextTokens = contextTokens,
+                    totalTokens = totalTokens,
                 )
             }
         }
@@ -195,8 +193,6 @@ class ChatRepositoryImpl(
 
             // Добавляем сообщение ассистента в кеш
             addAssistantMessage(huggingFaceResponse.content)
-            val responseTokens = huggingFaceResponse.totalResponseTokens
-            updateContextTokens(responseTokens)
 
             // Возвращаем сообщение в формате AiMessage с временем запроса и токенами
             MessageResponseDto(
@@ -205,8 +201,7 @@ class ChatRepositoryImpl(
                 requestTime = requestEndTime - requestStartTime,
                 promptTokens = huggingFaceResponse.promptTokens,
                 completionTokens = huggingFaceResponse.completionTokens,
-                totalResponseTokens = responseTokens,
-                totalContextTokens = contextTokens,
+                totalTokens = huggingFaceResponse.totalTokens,
             )
         }
     }
@@ -240,16 +235,12 @@ class ChatRepositoryImpl(
         lastAgentType = agentType
         lastSystemPrompt = systemPrompt
     }
-    private fun updateContextTokens(responseTokens: Int?) {
-        responseTokens?.let { contextTokens += it }
-    }
 
     /**
      * Очистка кеша
      */
     private fun clearCache() {
         conversationCache.clear()
-        contextTokens = 0
     }
 
     /**
@@ -335,6 +326,7 @@ class ChatRepositoryImpl(
             else -> throw IllegalArgumentException("Model ${agentType.name} is not a Yandex GPT model")
         }
     }
+
 
     private companion object {
         const val MODEL_LITE = "yandexgpt-lite"

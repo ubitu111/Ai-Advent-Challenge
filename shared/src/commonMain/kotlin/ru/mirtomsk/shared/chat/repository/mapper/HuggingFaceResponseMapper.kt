@@ -13,7 +13,7 @@ data class HuggingFaceResponse(
     val content: String,
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
-    val totalResponseTokens: Int? = null,
+    val totalTokens: Int? = null,
 )
 
 /**
@@ -65,7 +65,7 @@ class HuggingFaceResponseMapper(
                             content = content,
                             promptTokens = promptTokens,
                             completionTokens = completionTokens,
-                            totalResponseTokens = totalTokens,
+                            totalTokens = totalTokens,
                         )
                     }
                 }
@@ -77,7 +77,7 @@ class HuggingFaceResponseMapper(
                         content = generatedText,
                         promptTokens = promptTokens,
                         completionTokens = completionTokens,
-                        totalResponseTokens = totalTokens,
+                        totalTokens = totalTokens,
                     )
                 }
             }
