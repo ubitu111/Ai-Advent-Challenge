@@ -350,14 +350,12 @@ private fun MessageMetadata(
 
         // Токены
         val tokensInfo = buildString {
-            append("Промпт: $promptTokens")
-            append(", ")
-            append("Ответ: $completionTokens")
-            append(", ")
+            append("Промпт: $promptTokens\n")
+            append("Ответ: $completionTokens\n")
             append("Всего: $totalTokens")
         }
         Text(
-            text = "Токены: $tokensInfo",
+            text = "Токены:\n$tokensInfo",
             style = MaterialTheme.typography.body2,
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(vertical = 2.dp)
