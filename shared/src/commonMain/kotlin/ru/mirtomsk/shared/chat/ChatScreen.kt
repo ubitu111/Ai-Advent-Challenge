@@ -234,7 +234,8 @@ private fun MessageBubble(message: Message) {
                     requestTime = message.requestTime,
                     promptTokens = message.promptTokens,
                     completionTokens = message.completionTokens,
-                    totalTokens = message.totalTokens,
+                    totalResponseTokens = message.totalResponseTokens,
+                    totalContextTokens = message.totalContextTokens,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
@@ -310,7 +311,8 @@ private fun MessageMetadata(
     requestTime: Long,
     promptTokens: Int?,
     completionTokens: Int?,
-    totalTokens: Int?,
+    totalResponseTokens: Int?,
+    totalContextTokens: Int?,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -350,14 +352,15 @@ private fun MessageMetadata(
 
         // Токены
         val tokensInfo = buildString {
-            append("Промпт: $promptTokens")
-            append(", ")
-            append("Ответ: $completionTokens")
-            append(", ")
-            append("Всего: $totalTokens")
+            append("Промпт: $promptTokens\n")
+//            append(", ")
+            append("Ответ: $completionTokens\n")
+//            append(", ")
+            append("За запрос: $totalResponseTokens\n")
+            append("Всего за запросы: $totalContextTokens")
         }
         Text(
-            text = "Токены: $tokensInfo",
+            text = "Токены:\n$tokensInfo",
             style = MaterialTheme.typography.body2,
             color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(vertical = 2.dp)

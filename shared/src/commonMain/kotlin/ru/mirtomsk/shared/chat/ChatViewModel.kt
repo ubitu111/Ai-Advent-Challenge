@@ -65,7 +65,8 @@ class ChatViewModel(
                                 requestTime = aiResponse.requestTime,
                                 promptTokens = aiResponse.promptTokens,
                                 completionTokens = aiResponse.completionTokens,
-                                totalTokens = aiResponse.totalTokens
+                                totalResponseTokens = aiResponse.totalResponseTokens,
+                                totalContextTokens = aiResponse.totalContextTokens,
                             )
                         }
 
@@ -76,7 +77,8 @@ class ChatViewModel(
                                 requestTime = aiResponse.requestTime,
                                 promptTokens = aiResponse.promptTokens,
                                 completionTokens = aiResponse.completionTokens,
-                                totalTokens = aiResponse.totalTokens
+                                totalResponseTokens = aiResponse.totalResponseTokens,
+                                totalContextTokens = aiResponse.totalContextTokens,
                             )
                         }
                     }

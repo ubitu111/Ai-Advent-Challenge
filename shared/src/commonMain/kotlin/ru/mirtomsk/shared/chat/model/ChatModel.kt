@@ -26,7 +26,8 @@ data class Message(
     val requestTime: Long = 0,
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
-    val totalTokens: Int? = null,
+    val totalResponseTokens: Int? = null,
+    val totalContextTokens: Int? = null,
 ) {
     enum class MessageRole {
         USER,

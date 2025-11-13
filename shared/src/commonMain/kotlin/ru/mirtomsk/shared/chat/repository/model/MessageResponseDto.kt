@@ -8,5 +8,6 @@ data class MessageResponseDto(
     val requestTime: Long,
     val promptTokens: Int?,
     val completionTokens: Int?,
-    val totalTokens: Int?,
+    val totalResponseTokens: Int?,
+    val totalContextTokens: Int?,
 )
