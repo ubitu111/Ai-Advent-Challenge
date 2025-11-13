@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 sealed class MessageContent {
     @Serializable
     data class Text(val value: String) : MessageContent()
-    
+
     @Serializable
     data class Structured(
         val title: String,
@@ -22,7 +22,11 @@ sealed class MessageContent {
 data class Message(
     val content: MessageContent,
     val timestamp: Long = System.currentTimeMillis(),
-    val role: MessageRole = MessageRole.USER
+    val role: MessageRole = MessageRole.USER,
+    val requestTime: Long = 0,
+    val promptTokens: Int? = null,
+    val completionTokens: Int? = null,
+    val totalTokens: Int? = null,
 ) {
     enum class MessageRole {
         USER,

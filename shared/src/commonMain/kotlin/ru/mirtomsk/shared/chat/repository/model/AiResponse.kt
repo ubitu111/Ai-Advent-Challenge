@@ -37,7 +37,6 @@ data class AiMessage(
     val role: MessageRoleDto,
     val text: MessageContent,
 ) {
-
     /**
      * Message content - either plain text or JSON structured data
      */

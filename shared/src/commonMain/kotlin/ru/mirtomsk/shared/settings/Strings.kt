@@ -21,8 +21,29 @@ object Strings {
     
     // Agent selection
     const val AGENT_SELECTION_TITLE = "Выбор агента"
-    const val LITE = "YandexGpt Lite"
-    const val PRO = "YandexGpt Pro"
+    
+    // Yandex GPT models
+    const val LITE = "Yandex GPT Lite"
+    const val PRO = "Yandex GPT Pro"
+    
+    // HuggingFace models - Top level
+    const val MISTRAL_7B_INSTRUCT = "Mistral 7B Instruct"
+    const val OPENAI_OSS_120B = "OPENAI OSS 120B"
+    
+    // HuggingFace models - Middle level
+    const val GPT_J_6B = "GPT-J 6B"
+    const val DIALOGPT_MEDIUM = "DialoGPT Medium"
+    
+    // HuggingFace models - Basic level
+    const val TINYLLAMA_1_1B = "TinyLlama 1.1B Chat"
+    const val GPT2 = "GPT-2"
+    const val DISTILGPT2 = "DistilGPT-2"
+
+    const val SAO10 = "SAO-10"
+
+    const val QWEN05B = "Qwen-0.5B"
+
+    const val QWEN7B = "Qwen-7B"
     
     // System prompt selection
     const val DEFAULT = "Дефолт"
@@ -37,8 +58,25 @@ object Strings {
 
     fun getAgentName(agentType: AgentType): String {
         return when (agentType) {
+            // Yandex GPT models
             AgentType.LITE -> LITE
             AgentType.PRO -> PRO
+            
+            // HuggingFace models - Top level
+            AgentType.MISTRAL_7B_INSTRUCT -> MISTRAL_7B_INSTRUCT
+            AgentType.OPENAI_OSS_120B -> OPENAI_OSS_120B
+            
+            // HuggingFace models - Middle level
+            AgentType.GPT_J_6B -> GPT_J_6B
+            AgentType.DIALOGPT_MEDIUM -> DIALOGPT_MEDIUM
+            
+            // HuggingFace models - Basic level
+            AgentType.TINYLLAMA_1_1B -> TINYLLAMA_1_1B
+            AgentType.GPT2 -> GPT2
+            AgentType.DISTILGPT2 -> DISTILGPT2
+            AgentType.SAO10 -> SAO10
+            AgentType.QWEN05B -> QWEN05B
+            AgentType.QWEN7B -> QWEN7B
         }
     }
     

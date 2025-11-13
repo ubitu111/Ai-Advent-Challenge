@@ -17,6 +17,10 @@ object ApiConfigReader {
         return readProperty("api.key.id")
     }
 
+    fun readHuggingFaceToken(): String {
+        return readProperty("huggingface.token")
+    }
+
     private fun readProperty(key: String): String {
 
         val properties = Properties()

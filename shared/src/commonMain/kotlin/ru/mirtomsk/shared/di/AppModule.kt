@@ -9,6 +9,7 @@ import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
@@ -30,7 +31,8 @@ val configModule = module {
     single<ApiConfig> {
         ApiConfigImpl(
             apiKey = ApiConfigReader.readApiKey(),
-            keyId = ApiConfigReader.readKeyId()
+            keyId = ApiConfigReader.readKeyId(),
+            huggingFaceToken = ApiConfigReader.readHuggingFaceToken()
         )
     }
 }
@@ -64,11 +66,18 @@ val repositoryModule = module {
     }
 
     single {
+        HuggingFaceResponseMapper(
+            json = get()
+        )
+    }
+
+    single {
         ChatRepositoryImpl(
             chatApiService = get(),
             apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
-            responseMapper = get(),
+            yandexResponseMapper = get<AiResponseMapper>(),
+            huggingFaceResponseMapper = get<HuggingFaceResponseMapper>(),
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
             systemPromptProvider = get<SystemPromptProvider>(),

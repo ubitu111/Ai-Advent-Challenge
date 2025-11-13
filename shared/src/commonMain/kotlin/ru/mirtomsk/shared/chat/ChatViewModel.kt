@@ -61,14 +61,22 @@ class ChatViewModel(
                                     text = jsonResponse.text,
                                     links = links
                                 ),
-                                role = MessageRole.ASSISTANT
+                                role = MessageRole.ASSISTANT,
+                                requestTime = aiResponse.requestTime,
+                                promptTokens = aiResponse.promptTokens,
+                                completionTokens = aiResponse.completionTokens,
+                                totalTokens = aiResponse.totalTokens
                             )
                         }
 
                         is AiMessageContent.Text -> {
                             Message(
                                 content = MessageContent.Text(textContent.value),
-                                role = MessageRole.ASSISTANT
+                                role = MessageRole.ASSISTANT,
+                                requestTime = aiResponse.requestTime,
+                                promptTokens = aiResponse.promptTokens,
+                                completionTokens = aiResponse.completionTokens,
+                                totalTokens = aiResponse.totalTokens
                             )
                         }
                     }
