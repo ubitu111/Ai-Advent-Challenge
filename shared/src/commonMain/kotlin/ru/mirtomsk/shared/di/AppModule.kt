@@ -86,6 +86,7 @@ val repositoryModule = module {
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
+            contextCompressionProvider = get<ContextCompressionProvider>(),
         )
     }.bind<ChatRepository>()
 }
