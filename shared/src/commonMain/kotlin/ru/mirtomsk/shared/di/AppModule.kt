@@ -23,6 +23,7 @@ import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
+import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
@@ -99,6 +100,7 @@ val settingsModule = module {
     single { ContextResetProvider() }
     single { TemperatureProvider() }
     single { MaxTokensProvider() }
+    single { ContextCompressionProvider() }
 }
 
 /**
@@ -120,6 +122,7 @@ val viewModelModule = module {
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
+            contextCompressionProvider = get<ContextCompressionProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

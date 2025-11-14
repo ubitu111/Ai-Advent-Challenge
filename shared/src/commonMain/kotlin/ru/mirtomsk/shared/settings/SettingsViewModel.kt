@@ -17,6 +17,7 @@ import ru.mirtomsk.shared.network.prompt.SystemPromptDto
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
+import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
@@ -28,6 +29,7 @@ class SettingsViewModel(
     private val contextResetProvider: ContextResetProvider,
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
+    private val contextCompressionProvider: ContextCompressionProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -36,19 +38,21 @@ class SettingsViewModel(
         private set
 
     init {
-        // Initialize UI state with current format, agent type, system prompt, temperature and max tokens from providers
+        // Initialize UI state with current format, agent type, system prompt, temperature, max tokens and compression from providers
         viewmodelScope.launch {
             val currentFormat = formatProvider.responseFormat.first()
             val currentAgentType = agentTypeProvider.agentType.first()
             val currentSystemPrompt = systemPromptProvider.systemPrompt.first()
             val currentTemperature = temperatureProvider.temperature.first()
             val currentMaxTokens = maxTokensProvider.maxTokens.first()
+            val currentCompressionEnabled = contextCompressionProvider.isCompressionEnabled.first()
             uiState = uiState.copy(
                 responseFormat = formatToString(currentFormat),
                 selectedAgent = agentTypeDtoToAgentType(currentAgentType),
                 selectedSystemPrompt = systemPromptDtoToSystemPrompt(currentSystemPrompt),
                 temperature = currentTemperature.toString(),
-                maxTokens = currentMaxTokens.toString()
+                maxTokens = currentMaxTokens.toString(),
+                isCompressionEnabled = currentCompressionEnabled,
             )
         }
     }
@@ -85,6 +89,11 @@ class SettingsViewModel(
         uiState = uiState.copy(maxTokens = maxTokensString)
         val maxTokens = maxTokensString.toIntOrNull() ?: 2000
         maxTokensProvider.updateMaxTokens(maxTokens)
+    }
+
+    fun setCompressionEnabled(enabled: Boolean) {
+        uiState = uiState.copy(isCompressionEnabled = enabled)
+        contextCompressionProvider.updateCompressionEnabled(enabled)
     }
 
     private fun formatToString(format: ResponseFormat): String {

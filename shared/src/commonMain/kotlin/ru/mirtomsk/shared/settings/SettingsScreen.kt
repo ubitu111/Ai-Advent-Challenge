@@ -182,6 +182,51 @@ fun SettingsScreen(
                         placeholder = { Text(Strings.MAX_TOKENS_PLACEHOLDER) }
                     )
 
+                    // Context Compression section
+                    Text(
+                        text = Strings.CONTEXT_COMPRESSION_TITLE,
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    // Radio buttons group for context compression
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setCompressionEnabled(true) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.isCompressionEnabled,
+                                onClick = null
+                            )
+                            Text(
+                                text = Strings.COMPRESSION_ENABLED,
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setCompressionEnabled(false) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = !uiState.isCompressionEnabled,
+                                onClick = null
+                            )
+                            Text(
+                                text = Strings.COMPRESSION_DISABLED,
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
+                    }
+
                     // Agent Selection section
                     Text(
                         text = Strings.AGENT_SELECTION_TITLE,
