@@ -167,6 +167,21 @@ fun SettingsScreen(
                         placeholder = { Text(Strings.TEMPERATURE_PLACEHOLDER) }
                     )
 
+                    // Max Tokens section
+                    Text(
+                        text = Strings.MAX_TOKENS_TITLE,
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.maxTokens,
+                        onValueChange = { viewModel.setMaxTokens(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text(Strings.MAX_TOKENS_PLACEHOLDER) }
+                    )
+
                     // Agent Selection section
                     Text(
                         text = Strings.AGENT_SELECTION_TITLE,
