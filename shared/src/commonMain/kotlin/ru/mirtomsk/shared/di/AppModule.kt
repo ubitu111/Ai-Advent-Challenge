@@ -8,6 +8,8 @@ import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
+import ru.mirtomsk.shared.chat.repository.cache.ChatCache
+import ru.mirtomsk.shared.chat.repository.cache.FileChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
@@ -61,6 +63,12 @@ val repositoryModule = module {
         Json { ignoreUnknownKeys = true }
     }
 
+    single<ChatCache> {
+        FileChatCache(
+            json = get()
+        )
+    }
+
     single {
         AiResponseMapper(
             json = get()
@@ -87,6 +95,7 @@ val repositoryModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
+            chatCache = get<ChatCache>(),
         )
     }.bind<ChatRepository>()
 }
