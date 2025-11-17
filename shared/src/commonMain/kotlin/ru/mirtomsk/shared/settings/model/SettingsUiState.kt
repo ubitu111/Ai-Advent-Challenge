@@ -8,4 +8,5 @@ data class SettingsUiState(
     val selectedSystemPrompt: SystemPrompt = SystemPrompt.DEFAULT,
     val temperature: String = Strings.DEFAULT_TEMPERATURE,
     val maxTokens: String = Strings.DEFAULT_MAX_TOKENS,
+    val isCompressionEnabled: Boolean = false,
 )

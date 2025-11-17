@@ -19,6 +19,7 @@ import ru.mirtomsk.shared.network.HuggingFaceMessage
 import ru.mirtomsk.shared.network.HuggingFaceParameters
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
+import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
@@ -42,6 +43,7 @@ class ChatRepositoryImpl(
     private val contextResetProvider: ContextResetProvider,
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
+    private val contextCompressionProvider: ContextCompressionProvider,
 ) : ChatRepository {
 
     // Единый кеш истории общения для всех моделей
@@ -56,7 +58,7 @@ class ChatRepositoryImpl(
         return withContext(ioDispatcher) {
             val agentType = agentTypeProvider.agentType.first()
 
-            return@withContext if (agentType.isYandexGpt) {
+            if (agentType.isYandexGpt) {
                 sendMessageYandexGpt(text)
             } else {
                 sendMessageHuggingFace(text)
@@ -117,6 +119,9 @@ class ChatRepositoryImpl(
 
             // Обрабатываем ответ и добавляем в кеш
             val assistantMessage = processYandexResponse(response, format)
+
+            // Проверяем необходимость сжатия контекста
+            compressContextIfNeeded(agentType, format, temperature, maxTokens)
 
             // Извлекаем информацию о токенах из ответа
             val promptTokens = response.result.usage.inputTextTokens.toIntOrNull()
@@ -194,6 +199,9 @@ class ChatRepositoryImpl(
             // Добавляем сообщение ассистента в кеш
             addAssistantMessage(huggingFaceResponse.content)
 
+            // Проверяем необходимость сжатия контекста
+            compressContextIfNeeded(agentType, null, temperature, maxTokens)
+
             // Возвращаем сообщение в формате AiMessage с временем запроса и токенами
             MessageResponseDto(
                 role = MessageRoleDto.ASSISTANT,
@@ -204,6 +212,122 @@ class ChatRepositoryImpl(
                 totalTokens = huggingFaceResponse.totalTokens,
             )
         }
+    }
+
+    /**
+     * Сжатие контекста, если необходимо
+     */
+    private suspend fun compressContextIfNeeded(
+        agentType: AgentTypeDto,
+        format: ResponseFormat?,
+        temperature: Float,
+        maxTokens: Int
+    ) {
+        val isCompressionEnabled = contextCompressionProvider.isCompressionEnabled.first()
+        if (!isCompressionEnabled || conversationCache.size <= MAX_CONTEXT_WINDOW_SIZE) {
+            return
+        }
+
+        val compressionMessages = conversationCache
+        compressionMessages.add(
+            AiRequest.Message(
+                role = MessageRoleDto.USER,
+                text = Prompts.CONTEXT_COMPRESSION,
+            )
+        )
+
+        // Отправляем запрос на сжатие
+        val compressedContext = if (agentType.isYandexGpt) {
+            compressContextYandexGpt(agentType, format, temperature, maxTokens, compressionMessages)
+        } else {
+            compressContextHuggingFace(agentType, temperature, maxTokens, compressionMessages)
+        }
+
+        if (compressedContext != null) {
+            // Сохраняем системный промпт, если он был
+            val systemPromptMessage = conversationCache.firstOrNull { it.role == MessageRoleDto.SYSTEM }
+
+            // Очищаем кеш
+            clearCache()
+
+            // Восстанавливаем системный промпт, если он был
+            if (systemPromptMessage != null) {
+                conversationCache.add(systemPromptMessage)
+            }
+
+            // Добавляем сжатый контекст как сообщение ассистента
+            addAssistantMessage(compressedContext)
+        }
+    }
+
+    /**
+     * Сжатие контекста для Yandex GPT
+     */
+    private suspend fun compressContextYandexGpt(
+        agentType: AgentTypeDto,
+        format: ResponseFormat?,
+        temperature: Float,
+        maxTokens: Int,
+        compressionMessages: List<AiRequest.Message>,
+    ): String? {
+        val formatValue = format ?: formatProvider.responseFormat.first()
+
+        val request = AiRequest(
+            modelUri = "gpt://${apiConfig.keyId}/${getYandexModel(agentType)}",
+            completionOptions = AiRequest.CompletionOptions(
+                stream = false,
+                temperature = temperature,
+                maxTokens = maxTokens,
+            ),
+            messages = compressionMessages,
+        )
+
+        val responseBody = chatApiService.requestYandexGpt(request)
+        val response = yandexResponseMapper.mapResponseBody(responseBody, formatValue)
+
+        val compressedMessage = response.result.alternatives
+            .find { it.message.role == MessageRoleDto.ASSISTANT }
+            ?.message
+            ?: return null
+
+        return when (val content = compressedMessage.text) {
+            is AiMessage.MessageContent.Text -> content.value
+            is AiMessage.MessageContent.Json -> {
+                val jsonResponse = content.value
+                val linksText = if (jsonResponse.resource.isNotEmpty()) {
+                    "\nСсылки:\n${jsonResponse.resource.joinToString("\n") { it.link }}"
+                } else ""
+                "${jsonResponse.title}\n${jsonResponse.text}$linksText"
+            }
+        }
+    }
+
+    /**
+     * Сжатие контекста для HuggingFace
+     */
+    private suspend fun compressContextHuggingFace(
+        agentType: AgentTypeDto,
+        temperature: Float,
+        maxTokens: Int,
+        compressionMessages: List<AiRequest.Message>,
+    ): String? {
+        val messages = compressionMessages.map {
+            HuggingFaceMessage(role = it.role.name, content = it.text)
+        }
+
+        val parameters = HuggingFaceParameters(
+            max_new_tokens = maxTokens,
+            temperature = temperature.toDouble(),
+        )
+
+        val rawResponse = chatApiService.requestHuggingFace(
+            model = agentType,
+            messages = messages,
+            parameters = parameters,
+        )
+
+        val huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
+        return huggingFaceResponse.content
     }
 
     /**
@@ -331,6 +455,7 @@ class ChatRepositoryImpl(
     private companion object {
         const val MODEL_LITE = "yandexgpt-lite"
         const val MODEL_PRO = "yandexgpt"
+        const val MAX_CONTEXT_WINDOW_SIZE = 5
     }
 }
 

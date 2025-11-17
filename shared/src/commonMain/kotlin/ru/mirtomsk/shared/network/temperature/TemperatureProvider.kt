@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Manages the current temperature value and provides it as a Flow
  */
 class TemperatureProvider {
-    private val _temperature = MutableStateFlow(0f)
+    private val _temperature = MutableStateFlow(0.3f)
     val temperature: StateFlow<Float> = _temperature.asStateFlow()
 
     fun updateTemperature(temperature: Float) {
