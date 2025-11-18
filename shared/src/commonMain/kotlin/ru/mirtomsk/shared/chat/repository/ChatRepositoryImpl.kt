@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import ru.mirtomsk.shared.chat.context.ContextResetProvider
+import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
 import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
@@ -44,10 +45,8 @@ class ChatRepositoryImpl(
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
+    private val chatCache: ChatCache,
 ) : ChatRepository {
-
-    // Единый кеш истории общения для всех моделей
-    private val conversationCache = mutableListOf<AiRequest.Message>()
 
     private val cacheMutex = Mutex()
     private var lastAgentType: AgentTypeDto? = null
@@ -85,6 +84,9 @@ class ChatRepositoryImpl(
                 resetCounter = resetCounter
             )
 
+            // Получаем текущий кеш
+            val conversationCache = chatCache.getMessages().toMutableList()
+
             // Добавляем системное сообщение, если кеш пуст
             if (conversationCache.isEmpty()) {
                 conversationCache.add(
@@ -96,7 +98,7 @@ class ChatRepositoryImpl(
             }
 
             // Добавляем текущее сообщение пользователя в кеш
-            addUserMessage(text)
+            addUserMessage(conversationCache, text)
 
             // Фиксируем время начала запроса
             val requestStartTime = System.currentTimeMillis()
@@ -118,7 +120,10 @@ class ChatRepositoryImpl(
             val requestEndTime = System.currentTimeMillis()
 
             // Обрабатываем ответ и добавляем в кеш
-            val assistantMessage = processYandexResponse(response, format)
+            val assistantMessage = processYandexResponse(conversationCache, response, format)
+
+            // Сохраняем обновленный кеш
+            chatCache.saveMessages(conversationCache)
 
             // Проверяем необходимость сжатия контекста
             compressContextIfNeeded(agentType, format, temperature, maxTokens)
@@ -159,8 +164,11 @@ class ChatRepositoryImpl(
                 resetCounter = resetCounter
             )
 
+            // Получаем текущий кеш
+            val conversationCache = chatCache.getMessages().toMutableList()
+
             // Добавляем текущее сообщение пользователя в кеш
-            addUserMessage(text)
+            addUserMessage(conversationCache, text)
 
             // Преобразуем кеш в формат HuggingFace messages
             val messages = conversationCache.map { message ->
@@ -197,7 +205,10 @@ class ChatRepositoryImpl(
             val requestEndTime = System.currentTimeMillis()
 
             // Добавляем сообщение ассистента в кеш
-            addAssistantMessage(huggingFaceResponse.content)
+            addAssistantMessage(conversationCache, huggingFaceResponse.content)
+
+            // Сохраняем обновленный кеш
+            chatCache.saveMessages(conversationCache)
 
             // Проверяем необходимость сжатия контекста
             compressContextIfNeeded(agentType, null, temperature, maxTokens)
@@ -224,11 +235,12 @@ class ChatRepositoryImpl(
         maxTokens: Int
     ) {
         val isCompressionEnabled = contextCompressionProvider.isCompressionEnabled.first()
+        val conversationCache = chatCache.getMessages()
         if (!isCompressionEnabled || conversationCache.size <= MAX_CONTEXT_WINDOW_SIZE) {
             return
         }
 
-        val compressionMessages = conversationCache
+        val compressionMessages = conversationCache.toMutableList()
         compressionMessages.add(
             AiRequest.Message(
                 role = MessageRoleDto.USER,
@@ -248,15 +260,17 @@ class ChatRepositoryImpl(
             val systemPromptMessage = conversationCache.firstOrNull { it.role == MessageRoleDto.SYSTEM }
 
             // Очищаем кеш
-            clearCache()
+            chatCache.clear()
 
-            // Восстанавливаем системный промпт, если он был
+            // Восстанавливаем системный промпт и добавляем сжатый контекст
+            val newCache = mutableListOf<AiRequest.Message>()
             if (systemPromptMessage != null) {
-                conversationCache.add(systemPromptMessage)
+                newCache.add(systemPromptMessage)
             }
-
-            // Добавляем сжатый контекст как сообщение ассистента
-            addAssistantMessage(compressedContext)
+            addAssistantMessage(newCache, compressedContext)
+            
+            // Сохраняем обновленный кеш
+            chatCache.saveMessages(newCache)
         }
     }
 
@@ -333,14 +347,14 @@ class ChatRepositoryImpl(
     /**
      * Управление кешем разговора (общий метод для обоих типов моделей)
      */
-    private fun manageCache(
+    private suspend fun manageCache(
         agentType: AgentTypeDto,
         systemPrompt: SystemPromptDto?,
         resetCounter: Long
     ) {
         // Check if context was reset
         if (resetCounter != lastResetCounter) {
-            clearCache()
+            chatCache.clear()
             lastAgentType = null
             lastSystemPrompt = null
             lastResetCounter = resetCounter
@@ -348,12 +362,12 @@ class ChatRepositoryImpl(
 
         // Check if model changed
         if (lastAgentType != null && lastAgentType != agentType) {
-            clearCache()
+            chatCache.clear()
         }
 
         // Check if system prompt changed (только для Yandex GPT)
         if (systemPrompt != null && lastSystemPrompt != null && lastSystemPrompt != systemPrompt) {
-            clearCache()
+            chatCache.clear()
         }
 
         lastAgentType = agentType
@@ -361,17 +375,10 @@ class ChatRepositoryImpl(
     }
 
     /**
-     * Очистка кеша
-     */
-    private fun clearCache() {
-        conversationCache.clear()
-    }
-
-    /**
      * Добавление сообщения пользователя в кеш
      */
-    private fun addUserMessage(text: String) {
-        conversationCache.add(
+    private fun addUserMessage(cache: MutableList<AiRequest.Message>, text: String) {
+        cache.add(
             AiRequest.Message(
                 role = MessageRoleDto.USER,
                 text = text,
@@ -382,8 +389,8 @@ class ChatRepositoryImpl(
     /**
      * Добавление сообщения ассистента в кеш
      */
-    private fun addAssistantMessage(text: String) {
-        conversationCache.add(
+    private fun addAssistantMessage(cache: MutableList<AiRequest.Message>, text: String) {
+        cache.add(
             AiRequest.Message(
                 role = MessageRoleDto.ASSISTANT,
                 text = text,
@@ -395,6 +402,7 @@ class ChatRepositoryImpl(
      * Обработка ответа Yandex GPT и добавление в кеш
      */
     private fun processYandexResponse(
+        cache: MutableList<AiRequest.Message>,
         response: AiResponse,
         format: ResponseFormat
     ): AiMessage? {
@@ -415,7 +423,7 @@ class ChatRepositoryImpl(
                 "${jsonResponse.title}\n${jsonResponse.text}$linksText"
             }
         }
-        conversationCache.add(
+        cache.add(
             AiRequest.Message(
                 role = MessageRoleDto.ASSISTANT,
                 text = messageText
