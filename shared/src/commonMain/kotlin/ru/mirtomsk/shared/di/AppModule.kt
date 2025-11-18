@@ -26,6 +26,10 @@ import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
+import ru.mirtomsk.shared.network.mcp.McpApiService
+import ru.mirtomsk.shared.network.mcp.McpRepository
+import ru.mirtomsk.shared.network.mcp.McpRepositoryImpl
+import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
@@ -36,7 +40,8 @@ val configModule = module {
         ApiConfigImpl(
             apiKey = ApiConfigReader.readApiKey(),
             keyId = ApiConfigReader.readKeyId(),
-            huggingFaceToken = ApiConfigReader.readHuggingFaceToken()
+            huggingFaceToken = ApiConfigReader.readHuggingFaceToken(),
+            mcpgateToken = ApiConfigReader.readMcpgateToken(),
         )
     }
 }
@@ -50,6 +55,15 @@ val networkModule = module {
     single {
         ChatApiService(
             httpClient = get(),
+            apiConfig = get(),
+        )
+    }
+
+    single {
+        McpApiService(
+            httpClient = get(),
+            json = get(),
+            baseUrl = "https://gateway.mcpgate.ru/open_meteo/mcp",
             apiConfig = get(),
         )
     }
@@ -98,6 +112,13 @@ val repositoryModule = module {
             chatCache = get<ChatCache>(),
         )
     }.bind<ChatRepository>()
+
+    single {
+        McpRepositoryImpl(
+            mcpApiService = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+        )
+    }.bind<McpRepository>()
 }
 
 /**
@@ -111,6 +132,7 @@ val settingsModule = module {
     single { TemperatureProvider() }
     single { MaxTokensProvider() }
     single { ContextCompressionProvider() }
+    single { McpToolsProvider() }
 }
 
 /**
@@ -133,6 +155,8 @@ val viewModelModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
+            mcpRepository = get<McpRepository>(),
+            mcpToolsProvider = get<McpToolsProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

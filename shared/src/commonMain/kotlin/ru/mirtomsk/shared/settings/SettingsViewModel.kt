@@ -18,6 +18,8 @@ import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
+import ru.mirtomsk.shared.network.mcp.McpRepository
+import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
@@ -30,6 +32,8 @@ class SettingsViewModel(
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
+    private val mcpRepository: McpRepository,
+    private val mcpToolsProvider: McpToolsProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -46,6 +50,7 @@ class SettingsViewModel(
             val currentTemperature = temperatureProvider.temperature.first()
             val currentMaxTokens = maxTokensProvider.maxTokens.first()
             val currentCompressionEnabled = contextCompressionProvider.isCompressionEnabled.first()
+            val currentSelectedMcpTools = mcpToolsProvider.selectedTools.first()
             uiState = uiState.copy(
                 responseFormat = formatToString(currentFormat),
                 selectedAgent = agentTypeDtoToAgentType(currentAgentType),
@@ -53,7 +58,11 @@ class SettingsViewModel(
                 temperature = currentTemperature.toString(),
                 maxTokens = currentMaxTokens.toString(),
                 isCompressionEnabled = currentCompressionEnabled,
+                selectedMcpTools = currentSelectedMcpTools,
             )
+            
+            // Load MCP tools
+            loadMcpTools()
         }
     }
 
@@ -94,6 +103,37 @@ class SettingsViewModel(
     fun setCompressionEnabled(enabled: Boolean) {
         uiState = uiState.copy(isCompressionEnabled = enabled)
         contextCompressionProvider.updateCompressionEnabled(enabled)
+    }
+
+    /**
+     * Load MCP tools from server
+     */
+    fun loadMcpTools() {
+        viewmodelScope.launch {
+            uiState = uiState.copy(isLoadingMcpTools = true)
+            try {
+                val tools = mcpRepository.getTools()
+                mcpToolsProvider.updateAvailableTools(tools)
+                uiState = uiState.copy(
+                    mcpTools = tools,
+                    isLoadingMcpTools = false,
+                )
+            } catch (e: Exception) {
+                println("Error loading MCP tools: ${e.message}")
+                uiState = uiState.copy(isLoadingMcpTools = false)
+            }
+        }
+    }
+
+    /**
+     * Toggle MCP tool selection
+     */
+    fun toggleMcpTool(toolName: String) {
+        mcpToolsProvider.toggleTool(toolName)
+        viewmodelScope.launch {
+            val selectedTools = mcpToolsProvider.selectedTools.first()
+            uiState = uiState.copy(selectedMcpTools = selectedTools)
+        }
     }
 
     private fun formatToString(format: ResponseFormat): String {

@@ -62,6 +62,11 @@ object Strings {
     // Context reset
     const val RESET_CONTEXT_BUTTON = "Сбросить контекст"
 
+    // MCP Tools
+    const val MCP_TOOLS_TITLE = "MCP Инструменты"
+    const val MCP_TOOLS_LOADING = "Загрузка инструментов..."
+    const val MCP_TOOLS_EMPTY = "Инструменты не найдены"
+
     fun getAgentName(agentType: AgentType): String {
         return when (agentType) {
             // Yandex GPT models
