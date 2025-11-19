@@ -6,6 +6,7 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
+import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
@@ -19,17 +20,16 @@ import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
-import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
-import ru.mirtomsk.shared.network.format.ResponseFormatProvider
-import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
-import ru.mirtomsk.shared.network.temperature.TemperatureProvider
-import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
+import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpApiService
 import ru.mirtomsk.shared.network.mcp.McpRepository
 import ru.mirtomsk.shared.network.mcp.McpRepositoryImpl
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
+import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
+import ru.mirtomsk.shared.network.temperature.TemperatureProvider
+import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
 
 /**
@@ -63,8 +63,7 @@ val networkModule = module {
         McpApiService(
             httpClient = get(),
             json = get(),
-            baseUrl = "https://gateway.mcpgate.ru/open_meteo/mcp",
-            apiConfig = get(),
+            baseUrl = "http://localhost:8080/mcp",
         )
     }
 }

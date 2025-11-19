@@ -9,6 +9,8 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.plugins.cors.routing.*
 import kotlinx.serialization.json.Json
+import ru.mirtomsk.server.di.ServerModule
+import ru.mirtomsk.server.presentation.routing.configureMcpRouting
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
@@ -21,6 +23,7 @@ fun Application.configureServer() {
         json(Json {
             prettyPrint = true
             isLenient = true
+            ignoreUnknownKeys = true
         })
     }
     
@@ -34,9 +37,12 @@ fun Application.configureServer() {
         allowMethod(io.ktor.http.HttpMethod.Options)
     }
     
+    // Configure MCP routing
+    configureMcpRouting(ServerModule.mcpController)
+    
     routing {
         get("/hello") {
-            call.respondText("привет мир")
+            call.respondText("Hello world")
         }
     }
 }

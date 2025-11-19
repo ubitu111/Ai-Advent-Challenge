@@ -17,15 +17,11 @@ import ru.mirtomsk.shared.network.mcp.model.McpTool
 /**
  * API service for MCP (Model Context Protocol) server communication
  * Handles HTTP requests to MCP server using JSON-RPC 2.0 protocol
- *
- * Default server: Gismeteo MCP Server (public remote server)
- * Alternative: Can be configured to use other MCP servers
  */
 class McpApiService(
     private val httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String,
-    private val apiConfig: ApiConfig,
 ) {
     private var requestIdCounter = 1
 
@@ -39,8 +35,7 @@ class McpApiService(
             method = "tools/list",
         )
 
-        val token = apiConfig.mcpgateToken
-        val endpoint = "$baseUrl?apikey=$token"
+        val endpoint = baseUrl
 
         val response = httpClient.post(endpoint) {
             contentType(ContentType.Application.Json)
