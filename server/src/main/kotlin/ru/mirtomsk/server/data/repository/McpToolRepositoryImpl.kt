@@ -1,12 +1,10 @@
 package ru.mirtomsk.server.data.repository
 
-import ru.mirtomsk.server.domain.model.McpTool
 import ru.mirtomsk.server.domain.model.McpToolCall
 import ru.mirtomsk.server.domain.model.McpToolCallContent
 import ru.mirtomsk.server.domain.model.McpToolCallResult
-import ru.mirtomsk.server.domain.model.McpToolInputSchema
-import ru.mirtomsk.server.domain.model.McpToolProperty
 import ru.mirtomsk.server.domain.repository.McpToolRepository
+import ru.mirtomsk.server.domain.service.WeatherService
 
 /**
  * Implementation of McpToolRepository
@@ -14,136 +12,190 @@ import ru.mirtomsk.server.domain.repository.McpToolRepository
  * 
  * In a real-world scenario, this could be replaced with database or external service integration
  */
-class McpToolRepositoryImpl : McpToolRepository {
+class McpToolRepositoryImpl(
+    private val weatherService: WeatherService
+) : McpToolRepository {
     
-    private val availableTools = listOf(
-        McpTool(
-            name = "get_weather",
-            description = "Получить текущую погоду для указанного города",
-            inputSchema = McpToolInputSchema(
-                type = "object",
-                properties = mapOf(
-                    "city" to McpToolProperty(
-                        type = "string",
-                        description = "Название города"
-                    )
-                ),
-                required = listOf("city")
-            )
-        ),
-        McpTool(
-            name = "calculate",
-            description = "Выполнить математические вычисления",
-            inputSchema = McpToolInputSchema(
-                type = "object",
-                properties = mapOf(
-                    "expression" to McpToolProperty(
-                        type = "string",
-                        description = "Математическое выражение для вычисления"
-                    )
-                ),
-                required = listOf("expression")
-            )
-        ),
-        McpTool(
-            name = "get_time",
-            description = "Получить текущее время",
-            inputSchema = McpToolInputSchema(
-                type = "object",
-                properties = emptyMap(),
-                required = emptyList()
-            )
-        ),
-    )
-    
-    override suspend fun getAllTools(): List<McpTool> {
-        return availableTools
-    }
+    override suspend fun getAllTools() = McpToolName.getAllTools()
     
     override suspend fun callTool(toolCall: McpToolCall): McpToolCallResult {
-        return when (toolCall.toolName) {
-            "get_weather" -> handleGetWeather(toolCall.arguments)
-            "calculate" -> handleCalculate(toolCall.arguments)
-            "get_time" -> handleGetTime()
-            else -> McpToolCallResult(
-                content = listOf(
-                    McpToolCallContent(
-                        type = "text",
-                        text = "Инструмент '${toolCall.toolName}' не найден"
-                    )
-                ),
-                isError = true
-            )
+        val toolName = McpToolName.fromName(toolCall.toolName)
+            ?: return createErrorResult("Инструмент '${toolCall.toolName}' не найден")
+        
+        return when (toolName) {
+            McpToolName.GET_WEATHER -> handleGetWeather(toolCall.arguments)
+            McpToolName.GET_CURRENT_WEATHER -> handleGetCurrentWeather(toolCall.arguments)
+            McpToolName.GET_HOURLY_FORECAST -> handleGetHourlyForecast(toolCall.arguments)
+            McpToolName.CALCULATE -> handleCalculate(toolCall.arguments)
+            McpToolName.GET_TIME -> handleGetTime()
         }
     }
     
-    private fun handleGetWeather(arguments: Map<String, Any>): McpToolCallResult {
-        val city = arguments["city"] as? String ?: "неизвестный город"
-        val weather = when (city.lowercase()) {
-            "москва" -> "Солнечно, +15°C"
-            "санкт-петербург" -> "Облачно, +12°C"
-            "новосибирск" -> "Пасмурно, +8°C"
-            else -> "Погода для $city: переменная облачность, +10°C"
+    // ==================== Weather Tools ====================
+    
+    private suspend fun handleGetWeather(arguments: Map<String, Any>): McpToolCallResult {
+        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
+        val weather = getWeatherForCity(city) ?: return createErrorResult("не удалось получить данные о погоде для города '$city'")
+        
+        return createSuccessResult("Погода в $city: ${weather.description}, ${formatTemperature(weather.temperature)}°C")
+    }
+    
+    private suspend fun handleGetCurrentWeather(arguments: Map<String, Any>): McpToolCallResult {
+        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
+        val weather = getWeatherForCity(city) ?: return createErrorResult("не удалось получить данные о погоде для города '$city'")
+        
+        val result = buildString {
+            appendLine("Текущая погода в $city:")
+            appendLine("Температура: ${formatTemperature(weather.temperature)}°C")
+            appendLine("Условия: ${weather.description}")
+            appendLine("Скорость ветра: ${formatWindSpeed(weather.windSpeed)} км/ч")
+            appendLine("Время: ${weather.time}")
         }
         
-        return McpToolCallResult(
-            content = listOf(
-                McpToolCallContent(
-                    type = "text",
-                    text = "Погода в $city: $weather"
-                )
-            )
-        )
+        return createSuccessResult(result.trim())
     }
+    
+    private suspend fun handleGetHourlyForecast(arguments: Map<String, Any>): McpToolCallResult {
+        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
+        val hours = extractHours(arguments)
+        
+        val coordinates = getCoordinates(city) ?: return createErrorResult("не удалось найти координаты для города '$city'")
+        val forecast = weatherService.getHourlyForecast(coordinates.first, coordinates.second, hours)
+            ?: return createErrorResult("не удалось получить прогноз погоды для города '$city'")
+        
+        val result = buildString {
+            appendLine("Почасовой прогноз погоды для $city (${forecast.size} часов):")
+            appendLine()
+            forecast.take(24).forEach { hour ->
+                val time = extractTimeFromIso(hour.time)
+                appendLine("$time: ${formatTemperature(hour.temperature)}°C, ${hour.description}, ветер ${formatWindSpeed(hour.windSpeed)} км/ч")
+            }
+            if (forecast.size > 24) {
+                appendLine()
+                appendLine("... и еще ${forecast.size - 24} часов")
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    // ==================== Calculation Tools ====================
     
     private fun handleCalculate(arguments: Map<String, Any>): McpToolCallResult {
-        val expression = arguments["expression"] as? String
-            ?: return McpToolCallResult(
-                content = listOf(
-                    McpToolCallContent(
-                        type = "text",
-                        text = "Ошибка: не указано выражение для вычисления"
-                    )
-                ),
-                isError = true
-            )
+        val expression = extractExpression(arguments)
+            ?: return createErrorResult("не указано выражение для вычисления")
         
         return try {
-            // Простой калькулятор - в реальном приложении используйте более безопасный парсер
             val result = evaluateSimpleExpression(expression)
-            McpToolCallResult(
-                content = listOf(
-                    McpToolCallContent(
-                        type = "text",
-                        text = "Результат: $result"
-                    )
-                )
-            )
+            createSuccessResult("Результат: $result")
         } catch (e: Exception) {
-            McpToolCallResult(
-                content = listOf(
-                    McpToolCallContent(
-                        type = "text",
-                        text = "Ошибка вычисления: ${e.message}"
-                    )
-                ),
-                isError = true
-            )
+            createErrorResult("вычисления: ${e.message}")
         }
     }
+    
+    // ==================== Time Tools ====================
     
     private fun handleGetTime(): McpToolCallResult {
         val currentTime = java.time.LocalDateTime.now()
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
         
+        return createSuccessResult("Текущее время: $currentTime")
+    }
+    
+    // ==================== Helper Methods ====================
+    
+    /**
+     * Extract city argument from arguments map
+     */
+    private fun extractCity(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.CITY.key()] as? String
+    }
+    
+    /**
+     * Extract hours argument from arguments map with validation
+     */
+    private fun extractHours(arguments: Map<String, Any>): Int {
+        return (arguments[McpToolArgument.HOURS.key()] as? Number)?.toInt()?.coerceIn(1, 168) ?: 24
+    }
+    
+    /**
+     * Extract expression argument from arguments map
+     */
+    private fun extractExpression(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.EXPRESSION.key()] as? String
+    }
+    
+    /**
+     * Get coordinates for a city
+     */
+    private suspend fun getCoordinates(city: String): Pair<Double, Double>? {
+        return weatherService.getCoordinates(city)
+    }
+    
+    /**
+     * Get current weather for a city
+     */
+    private suspend fun getWeatherForCity(city: String): ru.mirtomsk.server.domain.service.CurrentWeatherData? {
+        val coordinates = getCoordinates(city) ?: return null
+        return weatherService.getCurrentWeather(coordinates.first, coordinates.second)
+    }
+    
+    /**
+     * Create success result with text content
+     */
+    private fun createSuccessResult(text: String): McpToolCallResult {
         return McpToolCallResult(
             content = listOf(
                 McpToolCallContent(
                     type = "text",
-                    text = "Текущее время: $currentTime"
+                    text = text
                 )
             )
         )
+    }
+    
+    /**
+     * Create error result with error message
+     */
+    private fun createErrorResult(message: String): McpToolCallResult {
+        return McpToolCallResult(
+            content = listOf(
+                McpToolCallContent(
+                    type = "text",
+                    text = "Ошибка: $message"
+                )
+            ),
+            isError = true
+        )
+    }
+    
+    /**
+     * Format temperature to one decimal place
+     */
+    private fun formatTemperature(temperature: Double): String {
+        return "%.1f".format(temperature)
+    }
+    
+    /**
+     * Format wind speed to one decimal place
+     */
+    private fun formatWindSpeed(windSpeed: Double): String {
+        return "%.1f".format(windSpeed)
+    }
+    
+    /**
+     * Extract time (HH:mm) from ISO format string (YYYY-MM-DDTHH:mm)
+     */
+    private fun extractTimeFromIso(isoTime: String): String {
+        return try {
+            if (isoTime.length >= 16) {
+                isoTime.substring(11, 16)
+            } else {
+                isoTime
+            }
+        } catch (e: Exception) {
+            isoTime
+        }
     }
     
     /**
