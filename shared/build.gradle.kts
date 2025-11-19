@@ -33,6 +33,7 @@ if (localPropertiesFile.exists()) {
 val apiKey: String = localProperties.getProperty("secret_key") ?: ""
 val keyId: String = localProperties.getProperty("key_id") ?: ""
 val huggingfaceToken: String = localProperties.getProperty("huggingface_token") ?: ""
+val mcpgateToken: String = localProperties.getProperty("mcpgate_token") ?: ""
 
 // Task to generate API config file
 tasks.register("generateApiConfig") {
@@ -40,13 +41,13 @@ tasks.register("generateApiConfig") {
         // Generate for commonMain resources (for desktop)
         val apiConfigFile = file("src/commonMain/resources/api.properties")
         apiConfigFile.parentFile.mkdirs()
-        apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nhuggingface.token=$huggingfaceToken")
+        apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nhuggingface.token=$huggingfaceToken\nmcpgate.token=$mcpgateToken")
         
         // Generate for Android assets
         val androidAssetsDir = rootProject.file("androidApp/src/main/assets")
         androidAssetsDir.mkdirs()
         val androidApiConfigFile = File(androidAssetsDir, "api.properties")
-        androidApiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nhuggingface.token=$huggingfaceToken")
+        androidApiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nhuggingface.token=$huggingfaceToken\nmcpgate.token=$mcpgateToken")
     }
 }
 

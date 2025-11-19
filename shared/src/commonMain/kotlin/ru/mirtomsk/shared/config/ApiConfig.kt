@@ -7,6 +7,7 @@ interface ApiConfig {
     val apiKey: String
     val keyId: String
     val huggingFaceToken: String
+    val mcpgateToken: String
 }
 
 /**
@@ -17,5 +18,6 @@ class ApiConfigImpl(
     override val apiKey: String,
     override val keyId: String,
     override val huggingFaceToken: String,
+    override val mcpgateToken: String,
 ) : ApiConfig
 
