@@ -35,7 +35,10 @@ data class AiAlternative(
 @Serializable
 data class AiMessage(
     val role: MessageRoleDto,
-    val text: MessageContent,
+    @Serializable(with = MessageContentSerializer::class)
+    val text: MessageContent? = null,
+    val toolCalls: List<AiToolCall>? = null,
+    val toolCallList: ToolCallList? = null,
 ) {
     /**
      * Message content - either plain text or JSON structured data
@@ -49,6 +52,43 @@ data class AiMessage(
         data class Json(val value: JsonResponse) : MessageContent()
     }
 }
+
+/**
+ * Tool call list from Yandex GPT API
+ */
+@Serializable
+data class ToolCallList(
+    val toolCalls: List<AiToolCall>,
+)
+
+/**
+ * Tool call from AI model
+ */
+@Serializable
+data class AiToolCall(
+    val id: String? = null,
+    val type: String = "function",
+    val function: AiToolCallFunction? = null,
+    val functionCall: FunctionCall? = null,
+)
+
+/**
+ * Tool call function details (OpenAI format)
+ */
+@Serializable
+data class AiToolCallFunction(
+    val name: String,
+    val arguments: String, // JSON string with arguments
+)
+
+/**
+ * Function call from Yandex GPT API
+ */
+@Serializable
+data class FunctionCall(
+    val name: String,
+    val arguments: Map<String, kotlinx.serialization.json.JsonElement>, // Object with arguments
+)
 
 /**
  * Structured JSON response content

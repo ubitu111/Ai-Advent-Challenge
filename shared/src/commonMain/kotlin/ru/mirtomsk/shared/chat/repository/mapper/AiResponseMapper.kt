@@ -52,6 +52,7 @@ class AiResponseMapper(
                         val jsonResponse = json.decodeFromString<JsonResponse>(cleanedJson)
                         AiMessage.MessageContent.Json(jsonResponse)
                     }
+                    null -> null // Если text отсутствует (только tool calls), оставляем null
                 }
 
                 alternative.copy(

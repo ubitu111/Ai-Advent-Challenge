@@ -14,6 +14,24 @@ data class HuggingFaceResponse(
     val promptTokens: Int? = null,
     val completionTokens: Int? = null,
     val totalTokens: Int? = null,
+    val toolCalls: List<HuggingFaceToolCall>? = null,
+)
+
+/**
+ * Tool call from HuggingFace API
+ */
+data class HuggingFaceToolCall(
+    val id: String? = null,
+    val type: String = "function",
+    val function: HuggingFaceToolCallFunction,
+)
+
+/**
+ * Tool call function details from HuggingFace
+ */
+data class HuggingFaceToolCallFunction(
+    val name: String,
+    val arguments: String, // JSON string with arguments
 )
 
 /**
@@ -59,15 +77,39 @@ class HuggingFaceResponseMapper(
                 if (choices != null && choices.isNotEmpty()) {
                     val firstChoice = choices.first().jsonObject
                     val message = firstChoice["message"]?.jsonObject
-                    val content = message?.get("content")?.jsonPrimitive?.content
-                    if (content != null) {
-                        return HuggingFaceResponse(
-                            content = content,
-                            promptTokens = promptTokens,
-                            completionTokens = completionTokens,
-                            totalTokens = totalTokens,
-                        )
+                    val content = message?.get("content")?.jsonPrimitive?.content ?: ""
+                    
+                    // Извлекаем tool_calls если они есть
+                    val toolCalls = message?.get("tool_calls")?.jsonArray?.mapNotNull { toolCallElement ->
+                        val toolCallObj = toolCallElement.jsonObject
+                        val id = toolCallObj["id"]?.jsonPrimitive?.content
+                        val type = toolCallObj["type"]?.jsonPrimitive?.content ?: "function"
+                        val functionObj = toolCallObj["function"]?.jsonObject
+                        
+                        if (functionObj != null) {
+                            val name = functionObj["name"]?.jsonPrimitive?.content
+                            val arguments = functionObj["arguments"]?.jsonPrimitive?.content ?: "{}"
+                            
+                            if (name != null) {
+                                HuggingFaceToolCall(
+                                    id = id,
+                                    type = type,
+                                    function = HuggingFaceToolCallFunction(
+                                        name = name,
+                                        arguments = arguments
+                                    )
+                                )
+                            } else null
+                        } else null
                     }
+                    
+                    return HuggingFaceResponse(
+                        content = content,
+                        promptTokens = promptTokens,
+                        completionTokens = completionTokens,
+                        totalTokens = totalTokens,
+                        toolCalls = toolCalls?.takeIf { it.isNotEmpty() },
+                    )
                 }
 
                 // Старый формат для обратной совместимости: { "generated_text": "..." }

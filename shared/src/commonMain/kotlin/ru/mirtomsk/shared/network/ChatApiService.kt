@@ -7,9 +7,11 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
@@ -21,6 +23,7 @@ import ru.mirtomsk.shared.network.agent.AgentTypeDto
 class ChatApiService(
     private val httpClient: HttpClient,
     private val apiConfig: ApiConfig,
+    private val json: Json,
 ) {
 
     /**
@@ -28,11 +31,19 @@ class ChatApiService(
      * Returns a Flow of response body lines (NDJSON format)
      */
     fun requestYandexGptStream(request: AiRequest): Flow<String> = flow {
+        // Явная сериализация для гарантии правильного формата с encodeDefaults = true
+        val requestBody = json.encodeToString(AiRequest.serializer(), request)
+        println("Yandex GPT Request: $requestBody")
+        
         val response = httpClient.post(YANDEX_API_URL) {
             contentType(ContentType.Application.Json)
             header("Authorization", "Api-Key ${apiConfig.apiKey}")
-            setBody(request)
+            // Используем setBody с String, чтобы избежать повторной сериализации через ContentNegotiation
+            setBody(requestBody)
         }
+        
+        // Логируем статус ответа для отладки
+        println("Yandex GPT Response Status: ${response.status}")
 
         val responseText = response.bodyAsText()
 
@@ -65,6 +76,7 @@ class ChatApiService(
         model: AgentTypeDto,
         messages: List<HuggingFaceMessage>,
         parameters: HuggingFaceParameters = HuggingFaceParameters(),
+        tools: List<HuggingFaceTool>? = null,
     ): String {
         val apiUrl = model.huggingFaceApiUrl
             ?: throw IllegalArgumentException("Model ${model.name} is not a HuggingFace model")
@@ -82,6 +94,7 @@ class ChatApiService(
                     stream = false,
                     temperature = parameters.temperature,
                     max_tokens = parameters.max_new_tokens,
+                    tools = tools,
                 )
             )
         }
@@ -104,6 +117,7 @@ data class HuggingFaceChatRequest(
     val stream: Boolean = false,
     val temperature: Double? = null,
     val max_tokens: Int? = null,
+    val tools: List<HuggingFaceTool>? = null,
 )
 
 /**
@@ -127,5 +141,43 @@ data class HuggingFaceParameters(
     val repetition_penalty: Double? = null,
     val return_full_text: Boolean = false,
     val do_sample: Boolean = true,
+)
+
+/**
+ * Tool model for HuggingFace API
+ */
+@Serializable
+data class HuggingFaceTool(
+    val type: String = "function",
+    val function: HuggingFaceToolFunction,
+)
+
+/**
+ * Tool function for HuggingFace API
+ */
+@Serializable
+data class HuggingFaceToolFunction(
+    val name: String,
+    val description: String? = null,
+    val parameters: HuggingFaceToolParameters? = null,
+)
+
+/**
+ * Tool parameters for HuggingFace API
+ */
+@Serializable
+data class HuggingFaceToolParameters(
+    val type: String = "object",
+    val properties: Map<String, HuggingFaceToolProperty>? = null,
+    val required: List<String>? = null,
+)
+
+/**
+ * Tool property for HuggingFace API
+ */
+@Serializable
+data class HuggingFaceToolProperty(
+    val type: String? = null,
+    val description: String? = null,
 )
 

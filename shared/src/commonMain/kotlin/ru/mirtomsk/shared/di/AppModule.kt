@@ -56,6 +56,7 @@ val networkModule = module {
         ChatApiService(
             httpClient = get(),
             apiConfig = get(),
+            json = get<Json>(),
         )
     }
 
@@ -73,7 +74,10 @@ val networkModule = module {
  */
 val repositoryModule = module {
     single<Json> {
-        Json { ignoreUnknownKeys = true }
+        Json { 
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
     }
 
     single<ChatCache> {
@@ -109,6 +113,9 @@ val repositoryModule = module {
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
             chatCache = get<ChatCache>(),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpApiService = get<McpApiService>(),
+            json = get<Json>(),
         )
     }.bind<ChatRepository>()
 
