@@ -155,6 +155,46 @@ curl http://localhost:8080/hello
           "properties": {},
           "required": []
         }
+      },
+      {
+        "name": "get_currency_rate",
+        "description": "Получить текущий курс обмена валют",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "base_currency": {
+              "type": "string",
+              "description": "Базовая валюта (например: USD, EUR, RUB)"
+            },
+            "target_currency": {
+              "type": "string",
+              "description": "Целевая валюта (например: USD, EUR, RUB)"
+            }
+          },
+          "required": ["base_currency", "target_currency"]
+        }
+      },
+      {
+        "name": "get_currency_rate_historical",
+        "description": "Получить курс обмена валют за определенный прошлый день",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "base_currency": {
+              "type": "string",
+              "description": "Базовая валюта (например: USD, EUR, RUB)"
+            },
+            "target_currency": {
+              "type": "string",
+              "description": "Целевая валюта (например: USD, EUR, RUB)"
+            },
+            "date": {
+              "type": "string",
+              "description": "Дата в формате YYYY-MM-DD (например: 2024-01-15)"
+            }
+          },
+          "required": ["base_currency", "target_currency", "date"]
+        }
       }
     ]
   }
@@ -234,6 +274,15 @@ curl -X POST http://localhost:8080/mcp \
 
 3. **get_time** - Получить текущее время
    - Параметры: нет
+
+4. **get_currency_rate** - Получить текущий курс обмена валют
+   - Параметры: `base_currency` (string, обязательный), `target_currency` (string, обязательный)
+   - Пример: `{"base_currency": "USD", "target_currency": "RUB"}` - получить курс доллара к рублю
+
+5. **get_currency_rate_historical** - Получить курс обмена валют за определенный прошлый день
+   - Параметры: `base_currency` (string, обязательный), `target_currency` (string, обязательный), `date` (string, обязательный)
+   - Формат даты: YYYY-MM-DD (например: 2024-01-15)
+   - Пример: `{"base_currency": "USD", "target_currency": "RUB", "date": "2024-01-15"}` - получить курс доллара к рублю на 15 января 2024 года
 
 ## Архитектура
 
