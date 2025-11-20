@@ -6,15 +6,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import ru.mirtomsk.shared.network.mcp.model.McpTool
 
 /**
- * Provider for MCP tools settings
- * Manages available tools and selected tools
+ * Provider for MCP tools
+ * Manages available tools from MCP server
  */
 class McpToolsProvider {
     private val _availableTools = MutableStateFlow<List<McpTool>>(emptyList())
     val availableTools: StateFlow<List<McpTool>> = _availableTools.asStateFlow()
-
-    private val _selectedTools = MutableStateFlow<Set<String>>(emptySet())
-    val selectedTools: StateFlow<Set<String>> = _selectedTools.asStateFlow()
 
     /**
      * Update list of available tools
@@ -24,35 +21,9 @@ class McpToolsProvider {
     }
 
     /**
-     * Toggle tool selection
+     * Get all available tools
      */
-    fun toggleTool(toolName: String) {
-        _selectedTools.value = if (_selectedTools.value.contains(toolName)) {
-            _selectedTools.value - toolName
-        } else {
-            _selectedTools.value + toolName
-        }
-    }
-
-    /**
-     * Set selected tools
-     */
-    fun setSelectedTools(toolNames: Set<String>) {
-        _selectedTools.value = toolNames
-    }
-
-    /**
-     * Check if tool is selected
-     */
-    fun isToolSelected(toolName: String): Boolean {
-        return _selectedTools.value.contains(toolName)
-    }
-
-    /**
-     * Get selected tools as list of McpTool objects
-     */
-    fun getSelectedTools(): List<McpTool> {
-        val selectedNames = _selectedTools.value
-        return _availableTools.value.filter { it.name in selectedNames }
+    fun getAvailableTools(): List<McpTool> {
+        return _availableTools.value
     }
 }

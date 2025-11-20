@@ -148,6 +148,8 @@ val viewModelModule = module {
     factory {
         ChatViewModel(
             repository = get<ChatRepository>(),
+            mcpRepository = get<McpRepository>(),
+            mcpToolsProvider = get<McpToolsProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
@@ -161,8 +163,6 @@ val viewModelModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
-            mcpRepository = get<McpRepository>(),
-            mcpToolsProvider = get<McpToolsProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

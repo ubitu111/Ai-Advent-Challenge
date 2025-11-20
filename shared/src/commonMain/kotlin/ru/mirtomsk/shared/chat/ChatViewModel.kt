@@ -13,15 +13,35 @@ import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
+import ru.mirtomsk.shared.network.mcp.McpRepository
+import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 
 class ChatViewModel(
     private val repository: ChatRepository,
+    private val mcpRepository: McpRepository,
+    private val mcpToolsProvider: McpToolsProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
 
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
     var uiState by mutableStateOf(ChatUiState())
         private set
+
+    init {
+        // Load MCP tools on app startup
+        loadMcpTools()
+    }
+
+    private fun loadMcpTools() {
+        viewmodelScope.launch {
+            try {
+                val tools = mcpRepository.getTools()
+                mcpToolsProvider.updateAvailableTools(tools)
+            } catch (e: Exception) {
+                println("Error loading MCP tools: ${e.message}")
+            }
+        }
+    }
 
     fun updateInputText(text: String) {
         uiState = uiState.copy(inputText = text)

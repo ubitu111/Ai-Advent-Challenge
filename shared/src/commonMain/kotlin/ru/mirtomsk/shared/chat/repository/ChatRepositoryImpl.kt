@@ -71,11 +71,11 @@ class ChatRepositoryImpl(
     override suspend fun sendMessage(text: String): MessageResponseDto? {
         return withContext(ioDispatcher) {
             val agentType = agentTypeProvider.agentType.first()
-            val selectedMcpTools = mcpToolsProvider.getSelectedTools()
+            val availableMcpTools = mcpToolsProvider.getAvailableTools()
             if (agentType.isYandexGpt) {
-                sendMessageYandexGpt(text, selectedMcpTools)
+                sendMessageYandexGpt(text, availableMcpTools)
             } else {
-                sendMessageHuggingFace(text, selectedMcpTools)
+                sendMessageHuggingFace(text, availableMcpTools)
             }
         }
     }
@@ -85,7 +85,7 @@ class ChatRepositoryImpl(
      */
     private suspend fun sendMessageYandexGpt(
         text: String,
-        selectedMcpTools: List<McpTool>,
+        availableMcpTools: List<McpTool>,
     ): MessageResponseDto? {
         val format = formatProvider.responseFormat.first()
         val agentType = agentTypeProvider.agentType.first()
@@ -121,9 +121,9 @@ class ChatRepositoryImpl(
             // Фиксируем время начала запроса
             val requestStartTime = System.currentTimeMillis()
 
-            // Получаем выбранные MCP инструменты
-            val tools = if (selectedMcpTools.isNotEmpty()) {
-                convertMcpToolsToYandexFormat(selectedMcpTools)
+            // Получаем доступные MCP инструменты
+            val tools = if (availableMcpTools.isNotEmpty()) {
+                convertMcpToolsToYandexFormat(availableMcpTools)
             } else {
                 null
             }
@@ -287,7 +287,7 @@ class ChatRepositoryImpl(
      */
     private suspend fun sendMessageHuggingFace(
         text: String,
-        selectedMcpTools: List<McpTool>,
+        availableMcpTools: List<McpTool>,
     ): MessageResponseDto? {
         val agentType = agentTypeProvider.agentType.first()
         val temperature = temperatureProvider.temperature.first()
@@ -326,9 +326,9 @@ class ChatRepositoryImpl(
                 temperature = temperature.toDouble(),
             )
 
-            // Получаем выбранные MCP инструменты
-            val tools = if (selectedMcpTools.isNotEmpty()) {
-                convertMcpToolsToHuggingFaceFormat(selectedMcpTools)
+            // Получаем доступные MCP инструменты
+            val tools = if (availableMcpTools.isNotEmpty()) {
+                convertMcpToolsToHuggingFaceFormat(availableMcpTools)
             } else {
                 null
             }
