@@ -17,4 +17,5 @@ rootProject.name = "ai-advent-challenge"
 include(":shared")
 include(":androidApp")
 include(":macosApp")
+include(":server")
 

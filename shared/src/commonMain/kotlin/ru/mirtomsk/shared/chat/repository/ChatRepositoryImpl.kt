@@ -18,12 +18,24 @@ import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.HuggingFaceMessage
 import ru.mirtomsk.shared.network.HuggingFaceParameters
+import ru.mirtomsk.shared.network.HuggingFaceTool
+import ru.mirtomsk.shared.network.HuggingFaceToolFunction
+import ru.mirtomsk.shared.network.HuggingFaceToolParameters
+import ru.mirtomsk.shared.network.HuggingFaceToolProperty
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.network.mcp.McpApiService
+import ru.mirtomsk.shared.network.mcp.McpToolsProvider
+import ru.mirtomsk.shared.network.mcp.model.McpTool
+import ru.mirtomsk.shared.chat.repository.model.FunctionCall
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
@@ -46,6 +58,9 @@ class ChatRepositoryImpl(
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
     private val chatCache: ChatCache,
+    private val mcpToolsProvider: McpToolsProvider,
+    private val mcpApiService: McpApiService,
+    private val json: Json,
 ) : ChatRepository {
 
     private val cacheMutex = Mutex()
@@ -103,6 +118,14 @@ class ChatRepositoryImpl(
             // Фиксируем время начала запроса
             val requestStartTime = System.currentTimeMillis()
 
+            // Получаем выбранные MCP инструменты
+            val selectedMcpTools = mcpToolsProvider.getSelectedTools()
+            val tools = if (selectedMcpTools.isNotEmpty()) {
+                convertMcpToolsToYandexFormat(selectedMcpTools)
+            } else {
+                null
+            }
+
             // Формируем и отправляем запрос
             val request = AiRequest(
                 modelUri = "gpt://${apiConfig.keyId}/${getYandexModel(agentType)}",
@@ -112,15 +135,122 @@ class ChatRepositoryImpl(
                     maxTokens = maxTokens,
                 ),
                 messages = conversationCache,
+                tools = tools,
             )
             val responseBody = chatApiService.requestYandexGpt(request)
             val response = yandexResponseMapper.mapResponseBody(responseBody, format)
 
+            // Обрабатываем tool calls если они есть
+            var currentResponse = response
+            var iterationCount = 0
+            val maxToolCallIterations = 5 // Ограничение на количество итераций вызовов инструментов
+
+            while (iterationCount < maxToolCallIterations) {
+                // Получаем tool calls из ответа (поддерживаем оба формата: toolCalls и toolCallList)
+                val message = currentResponse.result.alternatives.firstOrNull()?.message ?: break
+                val toolCalls = message.toolCallList?.toolCalls 
+                    ?: message.toolCalls 
+                    ?: break
+                
+                if (toolCalls.isEmpty()) break
+                
+                iterationCount++
+                
+                // Добавляем сообщение ассистента с tool calls в кеш (если есть текст)
+                message.text?.let { textContent ->
+                    val assistantMessageText = when (textContent) {
+                        is AiMessage.MessageContent.Text -> textContent.value
+                        is AiMessage.MessageContent.Json -> {
+                            val jsonResponse = textContent.value
+                            val linksText = if (jsonResponse.resource.isNotEmpty()) {
+                                "\nСсылки:\n${jsonResponse.resource.joinToString("\n") { it.link }}"
+                            } else ""
+                            "${jsonResponse.title}\n${jsonResponse.text}$linksText"
+                        }
+                    }
+                    
+                    conversationCache.add(
+                        AiRequest.Message(
+                            role = MessageRoleDto.ASSISTANT,
+                            text = assistantMessageText
+                        )
+                    )
+                }
+
+                // Вызываем каждый инструмент через MCP
+                val toolResults = mutableListOf<String>()
+                for (toolCall in toolCalls) {
+                    try {
+                        // Поддерживаем оба формата: function (OpenAI) и functionCall (Yandex GPT)
+                        val functionCall = toolCall.functionCall 
+                            ?: (toolCall.function?.let { func ->
+                                // Конвертируем OpenAI формат в Yandex GPT формат
+                                FunctionCall(
+                                    name = func.name,
+                                    arguments = try {
+                                        json.parseToJsonElement(func.arguments).jsonObject
+                                    } catch (e: Exception) {
+                                        kotlinx.serialization.json.buildJsonObject { 
+                                            put("input", func.arguments) 
+                                        }
+                                    }
+                                )
+                            })
+                        
+                        if (functionCall != null) {
+                            // Преобразуем arguments из Map<String, JsonElement> в JSON строку для MCP
+                            val argumentsJsonObject = buildJsonObject {
+                                functionCall.arguments.forEach { (key, value) ->
+                                    put(key, value)
+                                }
+                            }
+                            val argumentsJson = json.encodeToString(
+                                kotlinx.serialization.json.JsonObject.serializer(),
+                                argumentsJsonObject
+                            )
+                            
+                            val toolResult = mcpApiService.callTool(
+                                toolName = functionCall.name,
+                                arguments = argumentsJson
+                            )
+                            toolResults.add("Tool: ${functionCall.name}\nResult: $toolResult")
+                        }
+                    } catch (e: Exception) {
+                        val toolName = toolCall.functionCall?.name ?: toolCall.function?.name ?: "unknown"
+                        toolResults.add("Tool: $toolName\nError: ${e.message}")
+                    }
+                }
+
+                // Добавляем результаты инструментов в контекст
+                val toolResultsText = toolResults.joinToString("\n\n")
+                conversationCache.add(
+                    AiRequest.Message(
+                        role = MessageRoleDto.USER,
+                        text = "Результаты вызова инструментов:\n$toolResultsText\n\nИспользуй эти результаты для формирования ответа пользователю."
+                    )
+                )
+
+                // Отправляем новый запрос с результатами инструментов
+                val followUpRequest = AiRequest(
+                    modelUri = "gpt://${apiConfig.keyId}/${getYandexModel(agentType)}",
+                    completionOptions = AiRequest.CompletionOptions(
+                        stream = true,
+                        temperature = temperature,
+                        maxTokens = maxTokens,
+                    ),
+                    messages = conversationCache,
+                    tools = tools, // Передаем инструменты снова на случай, если нужны дополнительные вызовы
+                )
+                
+                val followUpResponseBody = chatApiService.requestYandexGpt(followUpRequest)
+                currentResponse = yandexResponseMapper.mapResponseBody(followUpResponseBody, format)
+            }
+
             // Фиксируем время окончания запроса
             val requestEndTime = System.currentTimeMillis()
 
-            // Обрабатываем ответ и добавляем в кеш
-            val assistantMessage = processYandexResponse(conversationCache, response, format)
+            // Обрабатываем финальный ответ и добавляем в кеш
+            val assistantMessage = processYandexResponse(conversationCache, currentResponse, format)
 
             // Сохраняем обновленный кеш
             chatCache.saveMessages(conversationCache)
@@ -135,9 +265,12 @@ class ChatRepositoryImpl(
 
             // Возвращаем сообщение с временем запроса и токенами
             assistantMessage?.let {
+                val messageText = assistantMessage.text 
+                    ?: AiMessage.MessageContent.Text("") // Если text отсутствует (только tool calls), используем пустую строку
+                
                 MessageResponseDto(
                     role = assistantMessage.role,
-                    text = assistantMessage.text,
+                    text = messageText,
                     requestTime = requestEndTime - requestStartTime,
                     promptTokens = promptTokens,
                     completionTokens = completionTokens,
@@ -188,23 +321,88 @@ class ChatRepositoryImpl(
                 temperature = temperature.toDouble(),
             )
 
+            // Получаем выбранные MCP инструменты
+            val selectedMcpTools = mcpToolsProvider.getSelectedTools()
+            val tools = if (selectedMcpTools.isNotEmpty()) {
+                convertMcpToolsToHuggingFaceFormat(selectedMcpTools)
+            } else {
+                null
+            }
+
             // Фиксируем время начала запроса
             val requestStartTime = System.currentTimeMillis()
 
             // Отправляем запрос и получаем сырой ответ
-            val rawResponse = chatApiService.requestHuggingFace(
+            var rawResponse = chatApiService.requestHuggingFace(
                 model = agentType,
                 messages = messages,
                 parameters = parameters,
+                tools = tools,
             )
 
             // Парсим ответ через маппер
-            val huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
+            var huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
+
+            // Обрабатываем tool calls если они есть
+            var iterationCount = 0
+            val maxToolCallIterations = 5 // Ограничение на количество итераций вызовов инструментов
+
+            while (huggingFaceResponse.toolCalls != null && huggingFaceResponse.toolCalls!!.isNotEmpty() && iterationCount < maxToolCallIterations) {
+                iterationCount++
+                
+                // Добавляем сообщение ассистента в кеш
+                addAssistantMessage(conversationCache, huggingFaceResponse.content)
+
+                // Вызываем каждый инструмент через MCP
+                val toolResults = mutableListOf<String>()
+                for (toolCall in huggingFaceResponse.toolCalls!!) {
+                    try {
+                        val toolResult = mcpApiService.callTool(
+                            toolName = toolCall.function.name,
+                            arguments = toolCall.function.arguments
+                        )
+                        toolResults.add("Tool: ${toolCall.function.name}\nResult: $toolResult")
+                    } catch (e: Exception) {
+                        toolResults.add("Tool: ${toolCall.function.name}\nError: ${e.message}")
+                    }
+                }
+
+                // Добавляем результаты инструментов в контекст
+                val toolResultsText = toolResults.joinToString("\n\n")
+                conversationCache.add(
+                    AiRequest.Message(
+                        role = MessageRoleDto.USER,
+                        text = "Результаты вызова инструментов:\n$toolResultsText\n\nИспользуй эти результаты для формирования ответа пользователю."
+                    )
+                )
+
+                // Преобразуем обновленный кеш в формат HuggingFace messages
+                val updatedMessages = conversationCache.map { message ->
+                    HuggingFaceMessage(
+                        role = when (message.role) {
+                            MessageRoleDto.USER -> "user"
+                            MessageRoleDto.ASSISTANT -> "assistant"
+                            MessageRoleDto.SYSTEM -> "system"
+                        },
+                        content = message.text
+                    )
+                }
+
+                // Отправляем новый запрос с результатами инструментов
+                rawResponse = chatApiService.requestHuggingFace(
+                    model = agentType,
+                    messages = updatedMessages,
+                    parameters = parameters,
+                    tools = tools, // Передаем инструменты снова на случай, если нужны дополнительные вызовы
+                )
+                
+                huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
+            }
 
             // Фиксируем время окончания запроса
             val requestEndTime = System.currentTimeMillis()
 
-            // Добавляем сообщение ассистента в кеш
+            // Добавляем финальное сообщение ассистента в кеш
             addAssistantMessage(conversationCache, huggingFaceResponse.content)
 
             // Сохраняем обновленный кеш
@@ -313,6 +511,7 @@ class ChatRepositoryImpl(
                 } else ""
                 "${jsonResponse.title}\n${jsonResponse.text}$linksText"
             }
+            else -> AiMessage.MessageContent.Text(content.toString()).value
         }
     }
 
@@ -411,24 +610,26 @@ class ChatRepositoryImpl(
             ?.message
             ?: return null
 
-        // Преобразуем AiMessage в AiRequest.Message для кеша
-        val messageText = when (val content = assistantMessage.text) {
-            is AiMessage.MessageContent.Text -> content.value
-            is AiMessage.MessageContent.Json -> {
-                // Для JSON формата преобразуем в текстовое представление
-                val jsonResponse = content.value
-                val linksText = if (jsonResponse.resource.isNotEmpty()) {
-                    "\nСсылки:\n${jsonResponse.resource.joinToString("\n") { it.link }}"
-                } else ""
-                "${jsonResponse.title}\n${jsonResponse.text}$linksText"
+        // Добавляем сообщение в кеш только если есть текст (не только tool calls)
+        assistantMessage.text?.let { content ->
+            val messageText = when (content) {
+                is AiMessage.MessageContent.Text -> content.value
+                is AiMessage.MessageContent.Json -> {
+                    // Для JSON формата преобразуем в текстовое представление
+                    val jsonResponse = content.value
+                    val linksText = if (jsonResponse.resource.isNotEmpty()) {
+                        "\nСсылки:\n${jsonResponse.resource.joinToString("\n") { it.link }}"
+                    } else ""
+                    "${jsonResponse.title}\n${jsonResponse.text}$linksText"
+                }
             }
-        }
-        cache.add(
-            AiRequest.Message(
-                role = MessageRoleDto.ASSISTANT,
-                text = messageText
+            cache.add(
+                AiRequest.Message(
+                    role = MessageRoleDto.ASSISTANT,
+                    text = messageText
+                )
             )
-        )
+        }
 
         return assistantMessage
     }
@@ -459,6 +660,72 @@ class ChatRepositoryImpl(
         }
     }
 
+
+    /**
+     * Convert MCP tools to Yandex GPT API format
+     * Adds information about MCP availability to tool descriptions
+     */
+    private fun convertMcpToolsToYandexFormat(mcpTools: List<McpTool>): List<AiRequest.Tool> {
+        return mcpTools.map { mcpTool ->
+            val enhancedDescription = buildString {
+                mcpTool.description?.let { append(it) }
+                append(" (Доступен через MCP сервер. Используй этот инструмент, когда он нужен для ответа на вопрос пользователя.)")
+            }
+            
+            AiRequest.Tool(
+                type = "function",
+                function = AiRequest.ToolFunction(
+                    name = mcpTool.name,
+                    description = enhancedDescription,
+                    parameters = mcpTool.inputSchema?.let { schema ->
+                        AiRequest.ToolParameters(
+                            type = schema.type ?: "object",
+                            properties = schema.properties?.mapValues { (_, prop) ->
+                                AiRequest.ToolProperty(
+                                    type = prop.type,
+                                    description = prop.description
+                                )
+                            },
+                            required = schema.required
+                        )
+                    }
+                )
+            )
+        }
+    }
+
+    /**
+     * Convert MCP tools to HuggingFace API format
+     * Adds information about MCP availability to tool descriptions
+     */
+    private fun convertMcpToolsToHuggingFaceFormat(mcpTools: List<McpTool>): List<HuggingFaceTool> {
+        return mcpTools.map { mcpTool ->
+            val enhancedDescription = buildString {
+                mcpTool.description?.let { append(it) }
+                append(" (Доступен через MCP сервер. Используй этот инструмент, когда он нужен для ответа на вопрос пользователя.)")
+            }
+            
+            HuggingFaceTool(
+                type = "function",
+                function = HuggingFaceToolFunction(
+                    name = mcpTool.name,
+                    description = enhancedDescription,
+                    parameters = mcpTool.inputSchema?.let { schema ->
+                        HuggingFaceToolParameters(
+                            type = schema.type ?: "object",
+                            properties = schema.properties?.mapValues { (_, prop) ->
+                                HuggingFaceToolProperty(
+                                    type = prop.type,
+                                    description = prop.description
+                                )
+                            },
+                            required = schema.required
+                        )
+                    }
+                )
+            )
+        }
+    }
 
     private companion object {
         const val MODEL_LITE = "yandexgpt-lite"

@@ -9,7 +9,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
-import ru.mirtomsk.shared.config.ApiConfig
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import ru.mirtomsk.shared.network.mcp.model.McpJsonRpcRequest
 import ru.mirtomsk.shared.network.mcp.model.McpJsonRpcResponse
 import ru.mirtomsk.shared.network.mcp.model.McpTool
@@ -17,15 +21,11 @@ import ru.mirtomsk.shared.network.mcp.model.McpTool
 /**
  * API service for MCP (Model Context Protocol) server communication
  * Handles HTTP requests to MCP server using JSON-RPC 2.0 protocol
- *
- * Default server: Gismeteo MCP Server (public remote server)
- * Alternative: Can be configured to use other MCP servers
  */
 class McpApiService(
     private val httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String,
-    private val apiConfig: ApiConfig,
 ) {
     private var requestIdCounter = 1
 
@@ -39,8 +39,7 @@ class McpApiService(
             method = "tools/list",
         )
 
-        val token = apiConfig.mcpgateToken
-        val endpoint = "$baseUrl?apikey=$token"
+        val endpoint = baseUrl
 
         val response = httpClient.post(endpoint) {
             contentType(ContentType.Application.Json)
@@ -70,6 +69,96 @@ class McpApiService(
         }
 
         return mcpResponse.result?.tools ?: emptyList()
+    }
+
+    /**
+     * Call a tool on MCP server
+     * Uses JSON-RPC 2.0 protocol with method "tools/call"
+     * 
+     * @param toolName Name of the tool to call
+     * @param arguments Arguments for the tool call as JSON string
+     * @return Result of the tool call as JSON string
+     */
+    suspend fun callTool(toolName: String, arguments: String): String {
+        // Parse arguments JSON
+        val argumentsJson = try {
+            json.parseToJsonElement(arguments).jsonObject
+        } catch (e: Exception) {
+            // If arguments is not valid JSON, wrap it as a string parameter
+            buildJsonObject { put("input", arguments) }
+        }
+
+        // Build request body manually for proper JSON-RPC format
+        val requestBody = buildJsonObject {
+            put("jsonrpc", "2.0")
+            put("id", requestIdCounter++)
+            put("method", "tools/call")
+            put("params", buildJsonObject {
+                put("name", toolName)
+                put("arguments", argumentsJson)
+            })
+        }
+
+        val endpoint = baseUrl
+
+        val response = httpClient.post(endpoint) {
+            contentType(ContentType.Application.Json)
+            header(HttpHeaders.Accept, "application/json, text/event-stream")
+            setBody(requestBody.toString())
+        }
+
+        val responseText = response.bodyAsText()
+        if (responseText.isBlank()) {
+            throw Exception("Empty response from MCP server")
+        }
+
+        // MCP server returns Server-Sent Events (SSE) format
+        val jsonText = extractJsonFromSse(responseText)
+        if (jsonText.isBlank()) {
+            throw Exception("No JSON data found in SSE response")
+        }
+
+        // Parse JSON-RPC response manually to handle different result formats
+        val responseJson = json.parseToJsonElement(jsonText).jsonObject
+
+        // Check for errors
+        val error = responseJson["error"]?.jsonObject
+        if (error != null) {
+            val errorMessage = error["message"]?.jsonPrimitive?.content ?: "Unknown error"
+            throw Exception("MCP server error: $errorMessage")
+        }
+
+        // Extract result - MCP returns result with content/text fields
+        val resultObj = responseJson["result"]?.jsonObject
+        if (resultObj != null) {
+            // Try to get content field - it can be an array or a primitive
+            val contentElement = resultObj["content"]
+            val content = when {
+                // Content is an array of objects (e.g., [{"type":"text","text":"..."}])
+                contentElement?.jsonArray != null -> {
+                    val contentArray = contentElement.jsonArray
+                    // Extract text from all content items
+                    contentArray.mapNotNull { item ->
+                        val itemObj = item.jsonObject
+                        itemObj["text"]?.jsonPrimitive?.content
+                            ?: itemObj["content"]?.jsonPrimitive?.content
+                    }.joinToString("\n")
+                }
+                // Content is a primitive string
+                contentElement?.jsonPrimitive != null -> {
+                    contentElement.jsonPrimitive.content
+                }
+                // Try text field as fallback
+                resultObj["text"]?.jsonPrimitive?.content != null -> {
+                    resultObj["text"]?.jsonPrimitive?.content
+                }
+                // Last resort: convert entire result to string
+                else -> resultObj.toString()
+            }
+            return content ?: throw Exception("No content found in MCP response")
+        }
+
+        throw Exception("No result in MCP response")
     }
 
     /**

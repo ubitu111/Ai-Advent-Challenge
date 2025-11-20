@@ -47,4 +47,12 @@ class McpToolsProvider {
     fun isToolSelected(toolName: String): Boolean {
         return _selectedTools.value.contains(toolName)
     }
+
+    /**
+     * Get selected tools as list of McpTool objects
+     */
+    fun getSelectedTools(): List<McpTool> {
+        val selectedNames = _selectedTools.value
+        return _availableTools.value.filter { it.name in selectedNames }
+    }
 }
