@@ -6,6 +6,7 @@ import ru.mirtomsk.server.domain.model.McpToolCallResult
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.WeatherService
+import java.time.format.DateTimeFormatter
 
 /**
  * Implementation of McpToolRepository
@@ -28,28 +29,38 @@ class McpToolRepositoryImpl(
             McpToolName.GET_WEATHER -> handleGetWeather(toolCall.arguments)
             McpToolName.GET_CURRENT_WEATHER -> handleGetCurrentWeather(toolCall.arguments)
             McpToolName.GET_HOURLY_FORECAST -> handleGetHourlyForecast(toolCall.arguments)
+            McpToolName.GET_WEATHER_BY_DATE -> handleGetWeatherByDate(toolCall.arguments)
             McpToolName.CALCULATE -> handleCalculate(toolCall.arguments)
-            McpToolName.GET_TIME -> handleGetTime()
             McpToolName.GET_CURRENCY_RATE -> handleGetCurrencyRate(toolCall.arguments)
             McpToolName.GET_CURRENCY_RATE_HISTORICAL -> handleGetCurrencyRateHistorical(toolCall.arguments)
+            McpToolName.GET_CITY_COORDINATES -> handleGetCityCoordinates(toolCall.arguments)
+            McpToolName.GET_CURRENT_DATETIME -> handleGetCurrentDateTime()
         }
     }
     
     // ==================== Weather Tools ====================
     
     private suspend fun handleGetWeather(arguments: Map<String, Any>): McpToolCallResult {
-        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
-        val weather = getWeatherForCity(city) ?: return createErrorResult("не удалось получить данные о погоде для города '$city'")
+        val coordinates = extractCoordinates(arguments) 
+            ?: return createErrorResult("не указаны координаты (latitude и longitude)")
         
-        return createSuccessResult("Погода в $city: ${weather.description}, ${formatTemperature(weather.temperature)}°C")
+        val weather = getWeatherForCoordinates(coordinates.first, coordinates.second)
+            ?: return createErrorResult("не удалось получить данные о погоде")
+        
+        val location = "${coordinates.first}, ${coordinates.second}"
+        return createSuccessResult("Погода в $location: ${weather.description}, ${formatTemperature(weather.temperature)}°C")
     }
     
     private suspend fun handleGetCurrentWeather(arguments: Map<String, Any>): McpToolCallResult {
-        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
-        val weather = getWeatherForCity(city) ?: return createErrorResult("не удалось получить данные о погоде для города '$city'")
+        val coordinates = extractCoordinates(arguments) 
+            ?: return createErrorResult("не указаны координаты (latitude и longitude)")
         
+        val weather = getWeatherForCoordinates(coordinates.first, coordinates.second)
+            ?: return createErrorResult("не удалось получить данные о погоде")
+        
+        val location = "${coordinates.first}, ${coordinates.second}"
         val result = buildString {
-            appendLine("Текущая погода в $city:")
+            appendLine("Текущая погода в $location:")
             appendLine("Температура: ${formatTemperature(weather.temperature)}°C")
             appendLine("Условия: ${weather.description}")
             appendLine("Скорость ветра: ${formatWindSpeed(weather.windSpeed)} км/ч")
@@ -60,15 +71,16 @@ class McpToolRepositoryImpl(
     }
     
     private suspend fun handleGetHourlyForecast(arguments: Map<String, Any>): McpToolCallResult {
-        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
+        val coordinates = extractCoordinates(arguments) 
+            ?: return createErrorResult("не указаны координаты (latitude и longitude)")
         val hours = extractHours(arguments)
         
-        val coordinates = getCoordinates(city) ?: return createErrorResult("не удалось найти координаты для города '$city'")
         val forecast = weatherService.getHourlyForecast(coordinates.first, coordinates.second, hours)
-            ?: return createErrorResult("не удалось получить прогноз погоды для города '$city'")
+            ?: return createErrorResult("не удалось получить прогноз погоды")
         
+        val location = "${coordinates.first}, ${coordinates.second}"
         val result = buildString {
-            appendLine("Почасовой прогноз погоды для $city (${forecast.size} часов):")
+            appendLine("Почасовой прогноз погоды для $location (${forecast.size} часов):")
             appendLine()
             forecast.take(24).forEach { hour ->
                 val time = extractTimeFromIso(hour.time)
@@ -78,6 +90,31 @@ class McpToolRepositoryImpl(
                 appendLine()
                 appendLine("... и еще ${forecast.size - 24} часов")
             }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGetWeatherByDate(arguments: Map<String, Any>): McpToolCallResult {
+        val coordinates = extractCoordinates(arguments) 
+            ?: return createErrorResult("не указаны координаты (latitude и longitude)")
+        val date = extractDate(arguments)
+            ?: return createErrorResult("не указана дата")
+        
+        // Validate date format (YYYY-MM-DD)
+        if (!isValidDateFormat(date)) {
+            return createErrorResult("неверный формат даты. Используйте формат YYYY-MM-DD (например: 2024-12-25)")
+        }
+        
+        val forecast = weatherService.getDailyForecastByDate(coordinates.first, coordinates.second, date)
+            ?: return createErrorResult("не удалось получить прогноз погоды на дату $date. Убедитесь, что дата не более чем на 16 дней в будущем")
+        
+        val location = "${coordinates.first}, ${coordinates.second}"
+        val result = buildString {
+            appendLine("Прогноз погоды на $date для $location:")
+            appendLine("Температура: от ${formatTemperature(forecast.temperatureMin)}°C до ${formatTemperature(forecast.temperatureMax)}°C")
+            appendLine("Условия: ${forecast.description}")
+            appendLine("Максимальная скорость ветра: ${formatWindSpeed(forecast.windSpeedMax)} км/ч")
         }
         
         return createSuccessResult(result.trim())
@@ -99,11 +136,42 @@ class McpToolRepositoryImpl(
     
     // ==================== Time Tools ====================
     
-    private fun handleGetTime(): McpToolCallResult {
-        val currentTime = java.time.LocalDateTime.now()
-            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    private fun handleGetCurrentDateTime(): McpToolCallResult {
+        val now = java.time.LocalDateTime.now()
+        val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+        val isoFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
         
-        return createSuccessResult("Текущее время: $currentTime")
+        val result = buildString {
+            appendLine("Текущая дата и время:")
+            appendLine("Дата и время: ${now.format(dateTimeFormatter)}")
+            appendLine("Дата: ${now.format(dateFormatter)}")
+            appendLine("Время: ${now.format(timeFormatter)}")
+            appendLine("ISO формат: ${now.format(isoFormatter)}")
+            appendLine("День недели: ${now.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale("ru"))}")
+            appendLine("День года: ${now.dayOfYear}")
+            appendLine("Неделя года: ${now.get(java.time.temporal.WeekFields.of(java.util.Locale.getDefault()).weekOfWeekBasedYear())}")
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    // ==================== Location Tools ====================
+    
+    private suspend fun handleGetCityCoordinates(arguments: Map<String, Any>): McpToolCallResult {
+        val city = extractCity(arguments) ?: return createErrorResult("не указано название города")
+        val coordinates = getCoordinates(city) 
+            ?: return createErrorResult("не удалось найти координаты для города '$city'")
+        
+        val result = buildString {
+            appendLine("Координаты для города '$city':")
+            appendLine("Широта: ${coordinates.first}")
+            appendLine("Долгота: ${coordinates.second}")
+            appendLine("Формат: ${coordinates.first}, ${coordinates.second}")
+        }
+        
+        return createSuccessResult(result.trim())
     }
     
     // ==================== Currency Tools ====================
@@ -160,6 +228,25 @@ class McpToolRepositoryImpl(
      */
     private fun extractCity(arguments: Map<String, Any>): String? {
         return arguments[McpToolArgument.CITY.key()] as? String
+    }
+    
+    /**
+     * Extract coordinates from arguments map (latitude and longitude)
+     */
+    private fun extractCoordinates(arguments: Map<String, Any>): Pair<Double, Double>? {
+        val latitude = (arguments[McpToolArgument.LATITUDE.key()] as? Number)?.toDouble()
+        val longitude = (arguments[McpToolArgument.LONGITUDE.key()] as? Number)?.toDouble()
+        
+        if (latitude != null && longitude != null) {
+            // Validate coordinates
+            if (latitude in -90.0..90.0 && longitude in -180.0..180.0) {
+                return Pair(latitude, longitude)
+            } else {
+                return null
+            }
+        }
+        
+        return null
     }
     
     /**
@@ -225,11 +312,10 @@ class McpToolRepositoryImpl(
     }
     
     /**
-     * Get current weather for a city
+     * Get current weather for coordinates
      */
-    private suspend fun getWeatherForCity(city: String): ru.mirtomsk.server.domain.service.CurrentWeatherData? {
-        val coordinates = getCoordinates(city) ?: return null
-        return weatherService.getCurrentWeather(coordinates.first, coordinates.second)
+    private suspend fun getWeatherForCoordinates(latitude: Double, longitude: Double): ru.mirtomsk.server.domain.service.CurrentWeatherData? {
+        return weatherService.getCurrentWeather(latitude, longitude)
     }
     
     /**

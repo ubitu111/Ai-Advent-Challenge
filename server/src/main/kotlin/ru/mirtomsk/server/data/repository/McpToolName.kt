@@ -13,46 +13,79 @@ enum class McpToolName(
     val inputSchema: McpToolInputSchema
 ) {
     GET_WEATHER(
-        description = "Получить текущую погоду для указанного города",
+        description = "Получить текущую погоду для указанных координат",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = mapOf(
-                McpToolArgument.CITY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Название города"
+                McpToolArgument.LATITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Широта в градусах"
+                ),
+                McpToolArgument.LONGITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Долгота в градусах"
                 )
             ),
-            required = listOf(McpToolArgument.CITY.key())
+            required = listOf(McpToolArgument.LATITUDE.key(), McpToolArgument.LONGITUDE.key())
         )
     ),
     GET_CURRENT_WEATHER(
-        description = "Получить текущую погоду для указанного города (детальная информация)",
+        description = "Получить текущую погоду для указанных координат (детальная информация)",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = mapOf(
-                McpToolArgument.CITY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Название города"
+                McpToolArgument.LATITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Широта в градусах"
+                ),
+                McpToolArgument.LONGITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Долгота в градусах"
                 )
             ),
-            required = listOf(McpToolArgument.CITY.key())
+            required = listOf(McpToolArgument.LATITUDE.key(), McpToolArgument.LONGITUDE.key())
         )
     ),
     GET_HOURLY_FORECAST(
-        description = "Получить почасовой прогноз погоды для указанного города",
+        description = "Получить почасовой прогноз погоды для указанных координат",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = mapOf(
-                McpToolArgument.CITY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Название города"
+                McpToolArgument.LATITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Широта в градусах"
+                ),
+                McpToolArgument.LONGITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Долгота в градусах"
                 ),
                 McpToolArgument.HOURS.key() to McpToolProperty(
                     type = "number",
                     description = "Количество часов для прогноза (по умолчанию 24, максимум 168)"
                 )
             ),
-            required = listOf(McpToolArgument.CITY.key())
+            required = listOf(McpToolArgument.LATITUDE.key(), McpToolArgument.LONGITUDE.key())
+        )
+    ),
+    GET_WEATHER_BY_DATE(
+        description = "Получить прогноз погоды на конкретную дату для указанных координат (до 16 дней вперед)",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.LATITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Широта в градусах"
+                ),
+                McpToolArgument.LONGITUDE.key() to McpToolProperty(
+                    type = "number",
+                    description = "Долгота в градусах"
+                ),
+                McpToolArgument.DATE.key() to McpToolProperty(
+                    type = "string",
+                    description = "Дата в формате YYYY-MM-DD (например: 2024-12-25)"
+                )
+            ),
+            required = listOf(McpToolArgument.LATITUDE.key(), McpToolArgument.LONGITUDE.key(), McpToolArgument.DATE.key())
         )
     ),
     CALCULATE(
@@ -68,8 +101,21 @@ enum class McpToolName(
             required = listOf(McpToolArgument.EXPRESSION.key())
         )
     ),
-    GET_TIME(
-        description = "Получить текущее время",
+    GET_CITY_COORDINATES(
+        description = "Получить координаты (широту и долготу) для указанного города",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.CITY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Название города"
+                )
+            ),
+            required = listOf(McpToolArgument.CITY.key())
+        )
+    ),
+    GET_CURRENT_DATETIME(
+        description = "Получить текущую дату и время в различных форматах (дата, время, ISO формат, день недели, день года, неделя года)",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = emptyMap(),

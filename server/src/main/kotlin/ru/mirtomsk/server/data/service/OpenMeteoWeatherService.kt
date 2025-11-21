@@ -5,9 +5,11 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import ru.mirtomsk.server.data.model.CurrentWeatherResponse
+import ru.mirtomsk.server.data.model.DailyForecastResponse
 import ru.mirtomsk.server.data.model.GeocodingResponse
 import ru.mirtomsk.server.data.model.HourlyForecastResponse
 import ru.mirtomsk.server.domain.service.CurrentWeatherData
+import ru.mirtomsk.server.domain.service.DailyWeatherData
 import ru.mirtomsk.server.domain.service.HourlyWeatherData
 import ru.mirtomsk.server.domain.service.WeatherService
 
@@ -140,6 +142,48 @@ class OpenMeteoWeatherService(
             }
             
             result
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    override suspend fun getDailyForecastByDate(
+        latitude: Double,
+        longitude: Double,
+        date: String
+    ): DailyWeatherData? {
+        return try {
+            // Open Meteo supports daily forecast up to 16 days ahead
+            val response: DailyForecastResponse = httpClient.get("$WEATHER_BASE_URL/forecast") {
+                parameter("latitude", latitude)
+                parameter("longitude", longitude)
+                parameter("daily", "temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max")
+                parameter("forecast_days", 16)
+                parameter("timezone", "auto")
+            }.body()
+            
+            val daily = response.daily ?: return null
+            val times = daily.time ?: return null
+            val tempMax = daily.temperature_2m_max ?: return null
+            val tempMin = daily.temperature_2m_min ?: return null
+            val weatherCodes = daily.weather_code ?: return null
+            val windSpeeds = daily.wind_speed_10m_max ?: return null
+            
+            // Find the index of the requested date
+            val dateIndex = times.indexOfFirst { it.startsWith(date) }
+            if (dateIndex == -1 || dateIndex >= tempMax.size || dateIndex >= tempMin.size || 
+                dateIndex >= weatherCodes.size || dateIndex >= windSpeeds.size) {
+                return null
+            }
+            
+            DailyWeatherData(
+                date = times[dateIndex],
+                temperatureMax = tempMax[dateIndex],
+                temperatureMin = tempMin[dateIndex],
+                weatherCode = weatherCodes[dateIndex],
+                windSpeedMax = windSpeeds[dateIndex],
+                description = weatherCodeMap[weatherCodes[dateIndex]] ?: "Неизвестно"
+            )
         } catch (e: Exception) {
             null
         }
