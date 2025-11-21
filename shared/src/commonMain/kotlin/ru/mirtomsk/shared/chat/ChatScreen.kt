@@ -44,12 +44,16 @@ import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.clipboard.createClipboardHelper
 import ru.mirtomsk.shared.di.koinInject
 import ru.mirtomsk.shared.settings.SettingsScreen
+import ru.mirtomsk.shared.dollarRate.DollarRateScreen
+import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
 
 @Composable
 fun ChatScreen(
-    viewModel: ChatViewModel = koinInject()
+    viewModel: ChatViewModel = koinInject(),
+    dollarRateViewModel: DollarRateViewModel = koinInject()
 ) {
     val uiState = viewModel.uiState
+    val dollarRateUiState = dollarRateViewModel.uiState
     val listState = rememberLazyListState()
 
     // Scroll to bottom when new message is added or loading state changes
@@ -57,6 +61,15 @@ fun ChatScreen(
         val itemCount = uiState.messages.size + if (uiState.isLoading) 1 else 0
         if (itemCount > 0) {
             listState.animateScrollToItem(itemCount - 1)
+        }
+    }
+
+    // Auto-open dollar rate screen when info is received
+    LaunchedEffect(dollarRateUiState.dollarRateInfo) {
+        if (dollarRateUiState.dollarRateInfo != null && 
+            dollarRateUiState.dollarRateInfo.isNotBlank() && 
+            !uiState.isDollarRateOpen) {
+            viewModel.openDollarRate()
         }
     }
 
@@ -70,8 +83,17 @@ fun ChatScreen(
                 title = { Text("Чат") },
                 actions = {
                     TextButton(
+                        onClick = { viewModel.openDollarRate() },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text = "💵",
+                            style = MaterialTheme.typography.h6
+                        )
+                    }
+                    TextButton(
                         onClick = { viewModel.openSettings() },
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
                         Text(
                             text = "⚙️",
@@ -150,6 +172,14 @@ fun ChatScreen(
         if (uiState.isSettingsOpen) {
             SettingsScreen(
                 onDismiss = { viewModel.closeSettings() }
+            )
+        }
+
+        // Dollar rate modal dialog - overlays on top
+        if (uiState.isDollarRateOpen) {
+            DollarRateScreen(
+                viewModel = dollarRateViewModel,
+                onDismiss = { viewModel.closeDollarRate() }
             )
         }
     }

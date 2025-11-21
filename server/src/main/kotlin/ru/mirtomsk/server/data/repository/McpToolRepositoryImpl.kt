@@ -4,6 +4,7 @@ import ru.mirtomsk.server.domain.model.McpToolCall
 import ru.mirtomsk.server.domain.model.McpToolCallContent
 import ru.mirtomsk.server.domain.model.McpToolCallResult
 import ru.mirtomsk.server.domain.repository.McpToolRepository
+import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.WeatherService
 
 /**
@@ -13,7 +14,8 @@ import ru.mirtomsk.server.domain.service.WeatherService
  * In a real-world scenario, this could be replaced with database or external service integration
  */
 class McpToolRepositoryImpl(
-    private val weatherService: WeatherService
+    private val weatherService: WeatherService,
+    private val currencyService: CurrencyService
 ) : McpToolRepository {
     
     override suspend fun getAllTools() = McpToolName.getAllTools()
@@ -28,6 +30,8 @@ class McpToolRepositoryImpl(
             McpToolName.GET_HOURLY_FORECAST -> handleGetHourlyForecast(toolCall.arguments)
             McpToolName.CALCULATE -> handleCalculate(toolCall.arguments)
             McpToolName.GET_TIME -> handleGetTime()
+            McpToolName.GET_CURRENCY_RATE -> handleGetCurrencyRate(toolCall.arguments)
+            McpToolName.GET_CURRENCY_RATE_HISTORICAL -> handleGetCurrencyRateHistorical(toolCall.arguments)
         }
     }
     
@@ -102,6 +106,53 @@ class McpToolRepositoryImpl(
         return createSuccessResult("Текущее время: $currentTime")
     }
     
+    // ==================== Currency Tools ====================
+    
+    private suspend fun handleGetCurrencyRate(arguments: Map<String, Any>): McpToolCallResult {
+        val baseCurrency = extractBaseCurrency(arguments)
+            ?: return createErrorResult("не указана базовая валюта")
+        val targetCurrency = extractTargetCurrency(arguments)
+            ?: return createErrorResult("не указана целевая валюта")
+        
+        val rateData = currencyService.getExchangeRate(baseCurrency, targetCurrency)
+            ?: return createErrorResult("не удалось получить курс обмена для пары $baseCurrency/$targetCurrency")
+        
+        val result = buildString {
+            appendLine("Курс обмена валют:")
+            appendLine("${rateData.baseCurrency} → ${rateData.targetCurrency}")
+            appendLine("Курс: ${formatRate(rateData.rate)}")
+            appendLine("Дата: ${rateData.date}")
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGetCurrencyRateHistorical(arguments: Map<String, Any>): McpToolCallResult {
+        val baseCurrency = extractBaseCurrency(arguments)
+            ?: return createErrorResult("не указана базовая валюта")
+        val targetCurrency = extractTargetCurrency(arguments)
+            ?: return createErrorResult("не указана целевая валюта")
+        val date = extractDate(arguments)
+            ?: return createErrorResult("не указана дата")
+        
+        // Validate date format (YYYY-MM-DD)
+        if (!isValidDateFormat(date)) {
+            return createErrorResult("неверный формат даты. Используйте формат YYYY-MM-DD (например: 2024-01-15)")
+        }
+        
+        val rateData = currencyService.getExchangeRateByDate(baseCurrency, targetCurrency, date)
+            ?: return createErrorResult("не удалось получить курс обмена для пары $baseCurrency/$targetCurrency на дату $date")
+        
+        val result = buildString {
+            appendLine("Курс обмена валют на $date:")
+            appendLine("${rateData.baseCurrency} → ${rateData.targetCurrency}")
+            appendLine("Курс: ${formatRate(rateData.rate)}")
+            appendLine("Дата: ${rateData.date}")
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
     // ==================== Helper Methods ====================
     
     /**
@@ -123,6 +174,47 @@ class McpToolRepositoryImpl(
      */
     private fun extractExpression(arguments: Map<String, Any>): String? {
         return arguments[McpToolArgument.EXPRESSION.key()] as? String
+    }
+    
+    /**
+     * Extract base currency argument from arguments map
+     */
+    private fun extractBaseCurrency(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.BASE_CURRENCY.key()] as? String
+    }
+    
+    /**
+     * Extract target currency argument from arguments map
+     */
+    private fun extractTargetCurrency(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.TARGET_CURRENCY.key()] as? String
+    }
+    
+    /**
+     * Extract date argument from arguments map
+     */
+    private fun extractDate(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.DATE.key()] as? String
+    }
+    
+    /**
+     * Validate date format (YYYY-MM-DD)
+     */
+    private fun isValidDateFormat(date: String): Boolean {
+        return try {
+            val regex = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+            if (!regex.matches(date)) return false
+            
+            val parts = date.split("-")
+            val year = parts[0].toInt()
+            val month = parts[1].toInt()
+            val day = parts[2].toInt()
+            
+            // Basic validation
+            year in 2000..2100 && month in 1..12 && day in 1..31
+        } catch (e: Exception) {
+            false
+        }
     }
     
     /**
@@ -181,6 +273,13 @@ class McpToolRepositoryImpl(
      */
     private fun formatWindSpeed(windSpeed: Double): String {
         return "%.1f".format(windSpeed)
+    }
+    
+    /**
+     * Format exchange rate to 4 decimal places
+     */
+    private fun formatRate(rate: Double): String {
+        return "%.4f".format(rate)
     }
     
     /**

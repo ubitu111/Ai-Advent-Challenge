@@ -31,6 +31,9 @@ import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
+import ru.mirtomsk.shared.dollarRate.DollarRateRepository
+import ru.mirtomsk.shared.dollarRate.DollarRateScheduler
+import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
 
 /**
  * Configuration module for API keys
@@ -125,6 +128,21 @@ val repositoryModule = module {
             ioDispatcher = get<DispatchersProvider>().io,
         )
     }.bind<McpRepository>()
+
+    single {
+        DollarRateRepository(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpApiService = get<McpApiService>(),
+            json = get<Json>(),
+        )
+    }
 }
 
 /**
@@ -148,6 +166,9 @@ val viewModelModule = module {
     factory {
         ChatViewModel(
             repository = get<ChatRepository>(),
+            mcpRepository = get<McpRepository>(),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            dollarRateScheduler = get<DollarRateScheduler>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }
@@ -161,9 +182,19 @@ val viewModelModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
-            mcpRepository = get<McpRepository>(),
-            mcpToolsProvider = get<McpToolsProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
+        )
+    }
+
+    single {
+        DollarRateViewModel()
+    }
+
+    single {
+        DollarRateScheduler(
+            repository = get<DollarRateRepository>(),
+            viewModel = get<DollarRateViewModel>(),
+            ioDispatcher = get<DispatchersProvider>().io,
         )
     }
 }

@@ -14,8 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Card
-import androidx.compose.material.Checkbox
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
@@ -289,62 +287,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // MCP Tools section
-                    Text(
-                        text = Strings.MCP_TOOLS_TITLE,
-                        style = MaterialTheme.typography.subtitle1,
-                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                    )
-
-                    // MCP Tools list with checkboxes
-                    if (uiState.isLoadingMcpTools) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    } else if (uiState.mcpTools.isEmpty()) {
-                        Text(
-                            text = Strings.MCP_TOOLS_EMPTY,
-                            style = MaterialTheme.typography.body2,
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
-                        )
-                    } else {
-                        Column {
-                            uiState.mcpTools.forEach { tool ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.toggleMcpTool(tool.name) }
-                                        .padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = uiState.selectedMcpTools.contains(tool.name),
-                                        onCheckedChange = { viewModel.toggleMcpTool(tool.name) }
-                                    )
-                                    Column(modifier = Modifier.padding(start = 8.dp)) {
-                                        Text(
-                                            text = tool.name,
-                                            style = MaterialTheme.typography.body1
-                                        )
-                                        if (!tool.description.isNullOrBlank()) {
-                                            Text(
-                                                text = tool.description,
-                                                style = MaterialTheme.typography.body2,
-                                                color = MaterialTheme.colors.onSurface.copy(alpha = 0.7f),
-                                                modifier = Modifier.padding(top = 4.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
 
                 // Fixed buttons at bottom

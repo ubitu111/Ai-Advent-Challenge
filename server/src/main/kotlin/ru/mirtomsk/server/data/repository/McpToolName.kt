@@ -75,6 +75,44 @@ enum class McpToolName(
             properties = emptyMap(),
             required = emptyList()
         )
+    ),
+    GET_CURRENCY_RATE(
+        description = "Получить текущий курс обмена валют",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.BASE_CURRENCY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Базовая валюта (например: USD, EUR, RUB)"
+                ),
+                McpToolArgument.TARGET_CURRENCY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Целевая валюта (например: USD, EUR, RUB)"
+                )
+            ),
+            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key())
+        )
+    ),
+    GET_CURRENCY_RATE_HISTORICAL(
+        description = "Получить курс обмена валют за определенный прошлый день",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.BASE_CURRENCY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Базовая валюта (например: USD, EUR, RUB)"
+                ),
+                McpToolArgument.TARGET_CURRENCY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Целевая валюта (например: USD, EUR, RUB)"
+                ),
+                McpToolArgument.DATE.key() to McpToolProperty(
+                    type = "string",
+                    description = "Дата в формате YYYY-MM-DD (например: 2024-01-15)"
+                )
+            ),
+            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key(), McpToolArgument.DATE.key())
+        )
     );
     
     /**

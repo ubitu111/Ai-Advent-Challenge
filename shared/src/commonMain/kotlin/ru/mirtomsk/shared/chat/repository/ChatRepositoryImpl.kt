@@ -71,11 +71,11 @@ class ChatRepositoryImpl(
     override suspend fun sendMessage(text: String): MessageResponseDto? {
         return withContext(ioDispatcher) {
             val agentType = agentTypeProvider.agentType.first()
-
+            val availableMcpTools = mcpToolsProvider.getAvailableTools()
             if (agentType.isYandexGpt) {
-                sendMessageYandexGpt(text)
+                sendMessageYandexGpt(text, availableMcpTools)
             } else {
-                sendMessageHuggingFace(text)
+                sendMessageHuggingFace(text, availableMcpTools)
             }
         }
     }
@@ -83,7 +83,10 @@ class ChatRepositoryImpl(
     /**
      * Отправка сообщения для Yandex GPT моделей
      */
-    private suspend fun sendMessageYandexGpt(text: String): MessageResponseDto? {
+    private suspend fun sendMessageYandexGpt(
+        text: String,
+        availableMcpTools: List<McpTool>,
+    ): MessageResponseDto? {
         val format = formatProvider.responseFormat.first()
         val agentType = agentTypeProvider.agentType.first()
         val systemPrompt = systemPromptProvider.systemPrompt.first()
@@ -118,10 +121,9 @@ class ChatRepositoryImpl(
             // Фиксируем время начала запроса
             val requestStartTime = System.currentTimeMillis()
 
-            // Получаем выбранные MCP инструменты
-            val selectedMcpTools = mcpToolsProvider.getSelectedTools()
-            val tools = if (selectedMcpTools.isNotEmpty()) {
-                convertMcpToolsToYandexFormat(selectedMcpTools)
+            // Получаем доступные MCP инструменты
+            val tools = if (availableMcpTools.isNotEmpty()) {
+                convertMcpToolsToYandexFormat(availableMcpTools)
             } else {
                 null
             }
@@ -283,7 +285,10 @@ class ChatRepositoryImpl(
     /**
      * Отправка сообщения для HuggingFace моделей
      */
-    private suspend fun sendMessageHuggingFace(text: String): MessageResponseDto? {
+    private suspend fun sendMessageHuggingFace(
+        text: String,
+        availableMcpTools: List<McpTool>,
+    ): MessageResponseDto? {
         val agentType = agentTypeProvider.agentType.first()
         val temperature = temperatureProvider.temperature.first()
         val maxTokens = maxTokensProvider.maxTokens.first()
@@ -321,10 +326,9 @@ class ChatRepositoryImpl(
                 temperature = temperature.toDouble(),
             )
 
-            // Получаем выбранные MCP инструменты
-            val selectedMcpTools = mcpToolsProvider.getSelectedTools()
-            val tools = if (selectedMcpTools.isNotEmpty()) {
-                convertMcpToolsToHuggingFaceFormat(selectedMcpTools)
+            // Получаем доступные MCP инструменты
+            val tools = if (availableMcpTools.isNotEmpty()) {
+                convertMcpToolsToHuggingFaceFormat(availableMcpTools)
             } else {
                 null
             }

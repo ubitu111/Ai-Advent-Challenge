@@ -7,7 +7,10 @@ package ru.mirtomsk.server.data.repository
 enum class McpToolArgument {
     CITY,
     HOURS,
-    EXPRESSION;
+    EXPRESSION,
+    BASE_CURRENCY,
+    TARGET_CURRENCY,
+    DATE;
     
     /**
      * Get argument name as lowercase string (for JSON keys)
