@@ -18,22 +18,24 @@ import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
 import ru.mirtomsk.shared.coroutines.DispatchersProvider
 import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
+import ru.mirtomsk.shared.dollarRate.DollarRateRepository
+import ru.mirtomsk.shared.dollarRate.DollarRateScheduler
+import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpApiService
+import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpRepository
 import ru.mirtomsk.shared.network.mcp.McpRepositoryImpl
+import ru.mirtomsk.shared.network.mcp.McpService
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
-import ru.mirtomsk.shared.dollarRate.DollarRateRepository
-import ru.mirtomsk.shared.dollarRate.DollarRateScheduler
-import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
 
 /**
  * Configuration module for API keys
@@ -63,12 +65,25 @@ val networkModule = module {
         )
     }
 
+    // Create MCP orchestrator with list of services
     single {
-        McpApiService(
-            httpClient = get(),
-            json = get(),
-            baseUrl = "http://localhost:8080/mcp",
+        val apiConfig: ApiConfig = get()
+        val token = apiConfig.mcpgateToken
+        val services: List<McpService> = listOf(
+            McpApiService(
+                httpClient = get(),
+                json = get(),
+                baseUrl = "http://localhost:8080/mcp",
+                serviceId = "mcp-localhost-8080",
+            ),
+            McpApiService(
+                httpClient = get(),
+                json = get(),
+                baseUrl = "https://gateway.mcpgate.ru/open_meteo/mcp?apikey=$token",
+                serviceId = "gateway-mcpgate",
+            )
         )
+        McpOrchestrator(services)
     }
 }
 
@@ -117,14 +132,14 @@ val repositoryModule = module {
             contextCompressionProvider = get<ContextCompressionProvider>(),
             chatCache = get<ChatCache>(),
             mcpToolsProvider = get<McpToolsProvider>(),
-            mcpApiService = get<McpApiService>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
         )
     }.bind<ChatRepository>()
 
     single {
         McpRepositoryImpl(
-            mcpApiService = get(),
+            mcpOrchestrator = get<McpOrchestrator>(),
             ioDispatcher = get<DispatchersProvider>().io,
         )
     }.bind<McpRepository>()
@@ -139,7 +154,7 @@ val repositoryModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             mcpToolsProvider = get<McpToolsProvider>(),
-            mcpApiService = get<McpApiService>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
         )
     }

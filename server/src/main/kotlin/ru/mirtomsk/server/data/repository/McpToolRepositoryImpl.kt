@@ -26,10 +26,10 @@ class McpToolRepositoryImpl(
             ?: return createErrorResult("Инструмент '${toolCall.toolName}' не найден")
         
         return when (toolName) {
-            McpToolName.GET_WEATHER -> handleGetWeather(toolCall.arguments)
-            McpToolName.GET_CURRENT_WEATHER -> handleGetCurrentWeather(toolCall.arguments)
-            McpToolName.GET_HOURLY_FORECAST -> handleGetHourlyForecast(toolCall.arguments)
-            McpToolName.GET_WEATHER_BY_DATE -> handleGetWeatherByDate(toolCall.arguments)
+//            McpToolName.GET_WEATHER -> handleGetWeather(toolCall.arguments)
+//            McpToolName.GET_CURRENT_WEATHER -> handleGetCurrentWeather(toolCall.arguments)
+//            McpToolName.GET_HOURLY_FORECAST -> handleGetHourlyForecast(toolCall.arguments)
+//            McpToolName.GET_WEATHER_BY_DATE -> handleGetWeatherByDate(toolCall.arguments)
             McpToolName.CALCULATE -> handleCalculate(toolCall.arguments)
             McpToolName.GET_CURRENCY_RATE -> handleGetCurrencyRate(toolCall.arguments)
             McpToolName.GET_CURRENCY_RATE_HISTORICAL -> handleGetCurrencyRateHistorical(toolCall.arguments)

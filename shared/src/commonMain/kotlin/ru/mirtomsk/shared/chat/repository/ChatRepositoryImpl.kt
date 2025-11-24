@@ -27,7 +27,7 @@ import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
-import ru.mirtomsk.shared.network.mcp.McpApiService
+import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.mcp.model.McpTool
 import ru.mirtomsk.shared.chat.repository.model.FunctionCall
@@ -59,7 +59,7 @@ class ChatRepositoryImpl(
     private val contextCompressionProvider: ContextCompressionProvider,
     private val chatCache: ChatCache,
     private val mcpToolsProvider: McpToolsProvider,
-    private val mcpApiService: McpApiService,
+    private val mcpOrchestrator: McpOrchestrator,
     private val json: Json,
 ) : ChatRepository {
 
@@ -211,7 +211,7 @@ class ChatRepositoryImpl(
                                 argumentsJsonObject
                             )
                             
-                            val toolResult = mcpApiService.callTool(
+                            val toolResult = mcpOrchestrator.callTool(
                                 toolName = functionCall.name,
                                 arguments = argumentsJson
                             )
@@ -361,7 +361,7 @@ class ChatRepositoryImpl(
                 val toolResults = mutableListOf<String>()
                 for (toolCall in huggingFaceResponse.toolCalls!!) {
                     try {
-                        val toolResult = mcpApiService.callTool(
+                        val toolResult = mcpOrchestrator.callTool(
                             toolName = toolCall.function.name,
                             arguments = toolCall.function.arguments
                         )
