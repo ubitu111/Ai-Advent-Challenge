@@ -33,7 +33,7 @@ class ChatViewModel(
         // Load MCP tools on app startup
         loadMcpTools()
         // Start dollar rate scheduler
-        dollarRateScheduler.start()
+//        dollarRateScheduler.start()
     }
 
     private fun loadMcpTools() {

@@ -57,3 +57,23 @@ data class HourlyForecast(
     val weather_code: List<Int>? = null,
     val wind_speed_10m: List<Double>? = null
 )
+
+/**
+ * DTO for Open Meteo Daily Forecast API response
+ */
+@Serializable
+data class DailyForecastResponse(
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val timezone: String? = null,
+    val daily: DailyForecast? = null
+)
+
+@Serializable
+data class DailyForecast(
+    val time: List<String>? = null,
+    val temperature_2m_max: List<Double>? = null,
+    val temperature_2m_min: List<Double>? = null,
+    val weather_code: List<Int>? = null,
+    val wind_speed_10m_max: List<Double>? = null
+)

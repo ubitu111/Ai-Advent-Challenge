@@ -10,7 +10,9 @@ enum class McpToolArgument {
     EXPRESSION,
     BASE_CURRENCY,
     TARGET_CURRENCY,
-    DATE;
+    DATE,
+    LATITUDE,
+    LONGITUDE;
     
     /**
      * Get argument name as lowercase string (for JSON keys)
