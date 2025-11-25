@@ -33,9 +33,17 @@ import ru.mirtomsk.shared.network.mcp.McpRepositoryImpl
 import ru.mirtomsk.shared.network.mcp.McpService
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
+import ru.mirtomsk.shared.network.rag.OllamaApiService
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
+import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepository
+import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepositoryImpl
+import ru.mirtomsk.shared.embeddings.EmbeddingsViewModel
+import ru.mirtomsk.shared.embeddings.cache.EmbeddingsCache
+import ru.mirtomsk.shared.embeddings.cache.FileEmbeddingsCache
+import ru.mirtomsk.shared.embeddings.FilePicker
+import ru.mirtomsk.shared.embeddings.createFilePicker
 
 /**
  * Configuration module for API keys
@@ -84,6 +92,13 @@ val networkModule = module {
             )
         )
         McpOrchestrator(services)
+    }
+
+    single {
+        OllamaApiService(
+            httpClient = get(),
+            baseUrl = "http://127.0.0.1:11434",
+        )
     }
 }
 
@@ -158,6 +173,23 @@ val repositoryModule = module {
             json = get<Json>(),
         )
     }
+
+    single {
+        EmbeddingsRepositoryImpl(
+            ollamaApiService = get<OllamaApiService>(),
+            ioDispatcher = get<DispatchersProvider>().io,
+        )
+    }.bind<EmbeddingsRepository>()
+
+    single<EmbeddingsCache> {
+        FileEmbeddingsCache(
+            json = get()
+        )
+    }
+
+    single<FilePicker> {
+        createFilePicker()
+    }
 }
 
 /**
@@ -210,6 +242,15 @@ val viewModelModule = module {
             repository = get<DollarRateRepository>(),
             viewModel = get<DollarRateViewModel>(),
             ioDispatcher = get<DispatchersProvider>().io,
+        )
+    }
+
+    factory {
+        EmbeddingsViewModel(
+            repository = get<EmbeddingsRepository>(),
+            cache = get<EmbeddingsCache>(),
+            filePicker = get<FilePicker>(),
+            mainDispatcher = get<DispatchersProvider>().main,
         )
     }
 }
