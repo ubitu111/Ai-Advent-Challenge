@@ -26,14 +26,15 @@ class McpApiService(
     private val httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String,
-) {
+    override val serviceId: String = baseUrl,
+) : McpService {
     private var requestIdCounter = 1
 
     /**
      * Get list of available tools from MCP server
      * Uses JSON-RPC 2.0 protocol with method "tools/list"
      */
-    suspend fun getTools(): List<McpTool> {
+    override suspend fun getTools(): List<McpTool> {
         val request = McpJsonRpcRequest(
             id = requestIdCounter++,
             method = "tools/list",
@@ -79,7 +80,7 @@ class McpApiService(
      * @param arguments Arguments for the tool call as JSON string
      * @return Result of the tool call as JSON string
      */
-    suspend fun callTool(toolName: String, arguments: String): String {
+    override suspend fun callTool(toolName: String, arguments: String): String {
         // Parse arguments JSON
         val argumentsJson = try {
             json.parseToJsonElement(arguments).jsonObject

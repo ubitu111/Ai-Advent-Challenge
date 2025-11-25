@@ -6,16 +6,16 @@ import ru.mirtomsk.shared.network.mcp.model.McpTool
 
 /**
  * Implementation of McpRepository
- * Fetches tools from MCP server using McpApiService
+ * Fetches tools from MCP servers using McpOrchestrator
  */
 class McpRepositoryImpl(
-    private val mcpApiService: McpApiService,
+    private val mcpOrchestrator: McpOrchestrator,
     private val ioDispatcher: CoroutineDispatcher,
 ) : McpRepository {
 
     override suspend fun getTools(): List<McpTool> {
         return withContext(ioDispatcher) {
-            mcpApiService.getTools()
+            mcpOrchestrator.getTools()
         }
     }
 }

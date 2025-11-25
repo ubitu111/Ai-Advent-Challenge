@@ -13,7 +13,7 @@ import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
-import ru.mirtomsk.shared.network.mcp.McpApiService
+import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.mcp.model.McpTool
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
@@ -32,7 +32,7 @@ class DollarRateRepository(
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
     private val mcpToolsProvider: McpToolsProvider,
-    private val mcpApiService: McpApiService,
+    private val mcpOrchestrator: McpOrchestrator,
     private val json: Json,
 ) {
 
@@ -170,7 +170,7 @@ class DollarRateRepository(
                                 argumentsJsonObject
                             )
 
-                            val toolResult = mcpApiService.callTool(
+                            val toolResult = mcpOrchestrator.callTool(
                                 toolName = functionCall.name,
                                 arguments = argumentsJson
                             )
