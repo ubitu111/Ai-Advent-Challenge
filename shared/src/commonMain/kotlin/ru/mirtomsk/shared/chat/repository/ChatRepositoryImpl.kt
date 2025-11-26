@@ -25,6 +25,7 @@ import ru.mirtomsk.shared.network.HuggingFaceToolProperty
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
+import ru.mirtomsk.shared.network.rag.RagProvider
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpOrchestrator
@@ -57,6 +58,7 @@ class ChatRepositoryImpl(
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
+    private val ragProvider: RagProvider,
     private val chatCache: ChatCache,
     private val mcpToolsProvider: McpToolsProvider,
     private val mcpOrchestrator: McpOrchestrator,

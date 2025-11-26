@@ -14,6 +14,9 @@ object Strings {
     const val CONTEXT_COMPRESSION_TITLE = "Сжатие контекста"
     const val COMPRESSION_ENABLED = "Включено"
     const val COMPRESSION_DISABLED = "Выключено"
+    const val RAG_TITLE = "Использовать RAG"
+    const val RAG_ENABLED = "Да"
+    const val RAG_DISABLED = "Нет"
     const val CLOSE_BUTTON = "Закрыть"
     const val DROPDOWN_ARROW = "▼"
 
