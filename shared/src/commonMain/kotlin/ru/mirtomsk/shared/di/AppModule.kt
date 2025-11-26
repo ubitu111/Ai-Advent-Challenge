@@ -21,6 +21,14 @@ import ru.mirtomsk.shared.coroutines.DispatchersProviderImpl
 import ru.mirtomsk.shared.dollarRate.DollarRateRepository
 import ru.mirtomsk.shared.dollarRate.DollarRateScheduler
 import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
+import ru.mirtomsk.shared.embeddings.EmbeddingsNormalizer
+import ru.mirtomsk.shared.embeddings.EmbeddingsViewModel
+import ru.mirtomsk.shared.embeddings.FilePicker
+import ru.mirtomsk.shared.embeddings.cache.EmbeddingsCache
+import ru.mirtomsk.shared.embeddings.cache.FileEmbeddingsCache
+import ru.mirtomsk.shared.embeddings.createFilePicker
+import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepository
+import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepositoryImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
@@ -35,16 +43,10 @@ import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.rag.OllamaApiService
 import ru.mirtomsk.shared.network.rag.RagProvider
+import ru.mirtomsk.shared.network.rag.RagService
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.settings.SettingsViewModel
-import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepository
-import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepositoryImpl
-import ru.mirtomsk.shared.embeddings.EmbeddingsViewModel
-import ru.mirtomsk.shared.embeddings.cache.EmbeddingsCache
-import ru.mirtomsk.shared.embeddings.cache.FileEmbeddingsCache
-import ru.mirtomsk.shared.embeddings.FilePicker
-import ru.mirtomsk.shared.embeddings.createFilePicker
 
 /**
  * Configuration module for API keys
@@ -108,7 +110,7 @@ val networkModule = module {
  */
 val repositoryModule = module {
     single<Json> {
-        Json { 
+        Json {
             ignoreUnknownKeys = true
             encodeDefaults = true
         }
@@ -147,6 +149,7 @@ val repositoryModule = module {
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
             ragProvider = get<RagProvider>(),
+            ragService = get<RagService>(),
             chatCache = get<ChatCache>(),
             mcpToolsProvider = get<McpToolsProvider>(),
             mcpOrchestrator = get<McpOrchestrator>(),
@@ -179,6 +182,7 @@ val repositoryModule = module {
     single {
         EmbeddingsRepositoryImpl(
             ollamaApiService = get<OllamaApiService>(),
+            embeddingsNormalizer = get<EmbeddingsNormalizer>(),
             ioDispatcher = get<DispatchersProvider>().io,
         )
     }.bind<EmbeddingsRepository>()
@@ -191,6 +195,19 @@ val repositoryModule = module {
 
     single<FilePicker> {
         createFilePicker()
+    }
+
+    single {
+        RagService(
+            ollamaApiService = get<OllamaApiService>(),
+            embeddingsCache = get<EmbeddingsCache>(),
+            embeddingsNormalizer = get<EmbeddingsNormalizer>(),
+            ioDispatcher = get<DispatchersProvider>().io,
+        )
+    }
+
+    single {
+        EmbeddingsNormalizer()
     }
 }
 

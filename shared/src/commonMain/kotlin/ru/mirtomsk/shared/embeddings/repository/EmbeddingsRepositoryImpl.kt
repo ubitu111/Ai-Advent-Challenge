@@ -1,18 +1,18 @@
 package ru.mirtomsk.shared.embeddings.repository
 
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import ru.mirtomsk.shared.embeddings.EmbeddingsNormalizer
 import ru.mirtomsk.shared.embeddings.model.EmbeddingsResult
 import ru.mirtomsk.shared.embeddings.model.Metadata
 import ru.mirtomsk.shared.embeddings.model.TextChunk
 import ru.mirtomsk.shared.network.rag.OllamaApiService
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sqrt
 
 class EmbeddingsRepositoryImpl(
     private val ollamaApiService: OllamaApiService,
+    private val embeddingsNormalizer: EmbeddingsNormalizer,
     private val ioDispatcher: CoroutineDispatcher,
 ) : EmbeddingsRepository {
 
@@ -27,7 +27,7 @@ class EmbeddingsRepositoryImpl(
         // Запрашиваем эмбеддинги для каждого чанка
         val chunksWithEmbeddings = chunks.mapIndexed { index, chunk ->
             val embeddings = ollamaApiService.embed(chunk.text)
-            val normalizedEmbeddings = normalizeEmbeddings(embeddings)
+            val normalizedEmbeddings = embeddingsNormalizer.normalize(embeddings)
 
             TextChunk(
                 id = "chunk_${index + 1}",
@@ -105,39 +105,6 @@ class EmbeddingsRepositoryImpl(
         return max((wordCount / 0.75).toInt(), charCount / 4)
     }
 
-    /**
-     * Нормализует эмбеддинги в диапазон от -1 до 1
-     * Использует L2 нормализацию для получения единичного вектора
-     */
-    private fun normalizeEmbeddings(embeddings: FloatArray): FloatArray {
-        // Вычисляем L2 норму
-        val norm = sqrt(embeddings.sumOf { it.toDouble() * it.toDouble() }).toFloat()
-
-        if (norm == 0f || norm.isNaN() || norm.isInfinite()) {
-            return FloatArray(embeddings.size)
-        }
-
-        // L2 нормализация - делим каждый элемент на норму
-        // Это дает единичный вектор, где значения уже в разумном диапазоне
-        // Для приведения к [-1, 1] используем min-max нормализацию
-        val l2Normalized = embeddings.map { it / norm }
-
-        val min = l2Normalized.minOrNull() ?: 0f
-        val max = l2Normalized.maxOrNull() ?: 0f
-
-        if (max == min || max.isNaN() || min.isNaN()) {
-            return l2Normalized.toFloatArray()
-        }
-
-        // Масштабируем от [min, max] к [-1, 1]
-        return l2Normalized.map { value ->
-            if (value.isNaN() || value.isInfinite()) {
-                0f
-            } else {
-                ((value - min) / (max - min)) * 2f - 1f
-            }
-        }.toFloatArray()
-    }
 
     private companion object {
         const val TARGET_CHUNK_SIZE = 50 // Средний размер чанка (500-600 токенов)

@@ -26,6 +26,7 @@ import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.rag.RagProvider
+import ru.mirtomsk.shared.network.rag.RagService
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpOrchestrator
@@ -59,6 +60,7 @@ class ChatRepositoryImpl(
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
     private val ragProvider: RagProvider,
+    private val ragService: RagService,
     private val chatCache: ChatCache,
     private val mcpToolsProvider: McpToolsProvider,
     private val mcpOrchestrator: McpOrchestrator,
@@ -109,10 +111,18 @@ class ChatRepositoryImpl(
 
             // Добавляем системное сообщение, если кеш пуст
             if (conversationCache.isEmpty()) {
+                val basePrompt = selectPrompt(systemPrompt, format)
+                val ragContext = getRagContextIfEnabled(text)
+                val finalPrompt = if (ragContext != null) {
+                    "$basePrompt\n\n$ragContext"
+                } else {
+                    basePrompt
+                }
+                
                 conversationCache.add(
                     AiRequest.Message(
                         role = MessageRoleDto.SYSTEM,
-                        text = selectPrompt(systemPrompt, format),
+                        text = finalPrompt,
                     )
                 )
             }
@@ -306,6 +316,19 @@ class ChatRepositoryImpl(
 
             // Получаем текущий кеш
             val conversationCache = chatCache.getMessages().toMutableList()
+
+            // Добавляем RAG контекст как системное сообщение, если кеш пуст и RAG включен
+            if (conversationCache.isEmpty()) {
+                val ragContext = getRagContextIfEnabled(text)
+                if (ragContext != null) {
+                    conversationCache.add(
+                        AiRequest.Message(
+                            role = MessageRoleDto.SYSTEM,
+                            text = ragContext,
+                        )
+                    )
+                }
+            }
 
             // Добавляем текущее сообщение пользователя в кеш
             addUserMessage(conversationCache, text)
@@ -638,6 +661,17 @@ class ChatRepositoryImpl(
         }
 
         return assistantMessage
+    }
+
+    /**
+     * Получает RAG контекст, если RAG включен
+     */
+    private suspend fun getRagContextIfEnabled(query: String): String? {
+        val isRagEnabled = ragProvider.isRagEnabled.first()
+        if (!isRagEnabled) {
+            return null
+        }
+        return ragService.retrieveRelevantContext(query)
     }
 
     private fun selectPrompt(systemPrompt: SystemPromptDto, format: ResponseFormat): String {
