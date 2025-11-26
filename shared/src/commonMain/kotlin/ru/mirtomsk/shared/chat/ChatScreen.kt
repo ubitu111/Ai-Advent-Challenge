@@ -46,11 +46,14 @@ import ru.mirtomsk.shared.di.koinInject
 import ru.mirtomsk.shared.settings.SettingsScreen
 import ru.mirtomsk.shared.dollarRate.DollarRateScreen
 import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
+import ru.mirtomsk.shared.embeddings.EmbeddingsScreen
+import ru.mirtomsk.shared.embeddings.EmbeddingsViewModel
 
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel = koinInject(),
-    dollarRateViewModel: DollarRateViewModel = koinInject()
+    dollarRateViewModel: DollarRateViewModel = koinInject(),
+    embeddingsViewModel: EmbeddingsViewModel = koinInject()
 ) {
     val uiState = viewModel.uiState
     val dollarRateUiState = dollarRateViewModel.uiState
@@ -82,6 +85,15 @@ fun ChatScreen(
             TopAppBar(
                 title = { Text("Чат") },
                 actions = {
+                    TextButton(
+                        onClick = { viewModel.openEmbeddings() },
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text = "🔢",
+                            style = MaterialTheme.typography.h6
+                        )
+                    }
                     TextButton(
                         onClick = { viewModel.openDollarRate() },
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -180,6 +192,14 @@ fun ChatScreen(
             DollarRateScreen(
                 viewModel = dollarRateViewModel,
                 onDismiss = { viewModel.closeDollarRate() }
+            )
+        }
+
+        // Embeddings modal dialog - overlays on top
+        if (uiState.isEmbeddingsOpen) {
+            EmbeddingsScreen(
+                viewModel = embeddingsViewModel,
+                onDismiss = { viewModel.closeEmbeddings() }
             )
         }
     }

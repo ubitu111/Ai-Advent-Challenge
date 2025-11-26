@@ -39,6 +39,7 @@ data class ChatUiState(
     val inputText: String = "",
     val isLoading: Boolean = false,
     val isSettingsOpen: Boolean = false,
-    val isDollarRateOpen: Boolean = false
+    val isDollarRateOpen: Boolean = false,
+    val isEmbeddingsOpen: Boolean = false,
 )
 

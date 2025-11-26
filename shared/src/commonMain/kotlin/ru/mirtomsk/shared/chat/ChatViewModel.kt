@@ -150,5 +150,13 @@ class ChatViewModel(
     fun closeDollarRate() {
         uiState = uiState.copy(isDollarRateOpen = false)
     }
+
+    fun openEmbeddings() {
+        uiState = uiState.copy(isEmbeddingsOpen = true)
+    }
+
+    fun closeEmbeddings() {
+        uiState = uiState.copy(isEmbeddingsOpen = false)
+    }
 }
 
