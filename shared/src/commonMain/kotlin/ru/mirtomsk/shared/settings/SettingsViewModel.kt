@@ -19,6 +19,7 @@ import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.rag.RagProvider
+import ru.mirtomsk.shared.network.rag.RagRerankingProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
@@ -32,6 +33,7 @@ class SettingsViewModel(
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
     private val ragProvider: RagProvider,
+    private val ragRerankingProvider: RagRerankingProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -40,7 +42,7 @@ class SettingsViewModel(
         private set
 
     init {
-        // Initialize UI state with current format, agent type, system prompt, temperature, max tokens, compression and RAG from providers
+        // Initialize UI state with current format, agent type, system prompt, temperature, max tokens, compression, RAG and reranking from providers
         viewmodelScope.launch {
             val currentFormat = formatProvider.responseFormat.first()
             val currentAgentType = agentTypeProvider.agentType.first()
@@ -49,6 +51,7 @@ class SettingsViewModel(
             val currentMaxTokens = maxTokensProvider.maxTokens.first()
             val currentCompressionEnabled = contextCompressionProvider.isCompressionEnabled.first()
             val currentRagEnabled = ragProvider.isRagEnabled.first()
+            val currentRerankingEnabled = ragRerankingProvider.isRerankingEnabled.first()
             uiState = uiState.copy(
                 responseFormat = formatToString(currentFormat),
                 selectedAgent = agentTypeDtoToAgentType(currentAgentType),
@@ -57,6 +60,7 @@ class SettingsViewModel(
                 maxTokens = currentMaxTokens.toString(),
                 isCompressionEnabled = currentCompressionEnabled,
                 isRagEnabled = currentRagEnabled,
+                isRerankingEnabled = currentRerankingEnabled,
             )
         }
     }
@@ -103,6 +107,11 @@ class SettingsViewModel(
     fun setRagEnabled(enabled: Boolean) {
         uiState = uiState.copy(isRagEnabled = enabled)
         ragProvider.updateRagEnabled(enabled)
+    }
+
+    fun setRerankingEnabled(enabled: Boolean) {
+        uiState = uiState.copy(isRerankingEnabled = enabled)
+        ragRerankingProvider.updateRerankingEnabled(enabled)
     }
 
 

@@ -17,6 +17,7 @@ object Strings {
     const val RAG_TITLE = "Использовать RAG"
     const val RAG_ENABLED = "Да"
     const val RAG_DISABLED = "Нет"
+    const val RERANKING_ENABLED = "Использовать реранкинг"
     const val CLOSE_BUTTON = "Закрыть"
     const val DROPDOWN_ARROW = "▼"
 

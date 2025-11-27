@@ -12,6 +12,7 @@ class DesktopFilePicker : FilePicker {
         val result = fileChooser.showOpenDialog(null)
         if (result == JFileChooser.APPROVE_OPTION) {
             val selectedFile = fileChooser.selectedFile
+//            val content = selectedFile.readText(charset = Charset.forName("windows-1251"))
             val content = selectedFile.readText()
             return FilePickerResult(
                 filePath = selectedFile.absolutePath,

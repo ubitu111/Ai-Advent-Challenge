@@ -10,4 +10,5 @@ data class SettingsUiState(
     val maxTokens: String = Strings.DEFAULT_MAX_TOKENS,
     val isCompressionEnabled: Boolean = false,
     val isRagEnabled: Boolean = false,
+    val isRerankingEnabled: Boolean = false,
 )
