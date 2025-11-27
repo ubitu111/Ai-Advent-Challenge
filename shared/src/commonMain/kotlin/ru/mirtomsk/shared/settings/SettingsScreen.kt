@@ -227,6 +227,51 @@ fun SettingsScreen(
                         }
                     }
 
+                    // RAG section
+                    Text(
+                        text = Strings.RAG_TITLE,
+                        style = MaterialTheme.typography.subtitle1,
+                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                    )
+
+                    // Radio buttons group for RAG
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setRagEnabled(true) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = uiState.isRagEnabled,
+                                onClick = null
+                            )
+                            Text(
+                                text = Strings.RAG_ENABLED,
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setRagEnabled(false) }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = !uiState.isRagEnabled,
+                                onClick = null
+                            )
+                            Text(
+                                text = Strings.RAG_DISABLED,
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
+                    }
+
                     // Agent Selection section
                     Text(
                         text = Strings.AGENT_SELECTION_TITLE,

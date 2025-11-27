@@ -18,6 +18,7 @@ import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
+import ru.mirtomsk.shared.network.rag.RagProvider
 import ru.mirtomsk.shared.settings.model.AgentType
 import ru.mirtomsk.shared.settings.model.SettingsUiState
 import ru.mirtomsk.shared.settings.model.SystemPrompt
@@ -30,6 +31,7 @@ class SettingsViewModel(
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
+    private val ragProvider: RagProvider,
     mainDispatcher: CoroutineDispatcher,
 ) {
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
@@ -38,7 +40,7 @@ class SettingsViewModel(
         private set
 
     init {
-        // Initialize UI state with current format, agent type, system prompt, temperature, max tokens and compression from providers
+        // Initialize UI state with current format, agent type, system prompt, temperature, max tokens, compression and RAG from providers
         viewmodelScope.launch {
             val currentFormat = formatProvider.responseFormat.first()
             val currentAgentType = agentTypeProvider.agentType.first()
@@ -46,6 +48,7 @@ class SettingsViewModel(
             val currentTemperature = temperatureProvider.temperature.first()
             val currentMaxTokens = maxTokensProvider.maxTokens.first()
             val currentCompressionEnabled = contextCompressionProvider.isCompressionEnabled.first()
+            val currentRagEnabled = ragProvider.isRagEnabled.first()
             uiState = uiState.copy(
                 responseFormat = formatToString(currentFormat),
                 selectedAgent = agentTypeDtoToAgentType(currentAgentType),
@@ -53,6 +56,7 @@ class SettingsViewModel(
                 temperature = currentTemperature.toString(),
                 maxTokens = currentMaxTokens.toString(),
                 isCompressionEnabled = currentCompressionEnabled,
+                isRagEnabled = currentRagEnabled,
             )
         }
     }
@@ -94,6 +98,11 @@ class SettingsViewModel(
     fun setCompressionEnabled(enabled: Boolean) {
         uiState = uiState.copy(isCompressionEnabled = enabled)
         contextCompressionProvider.updateCompressionEnabled(enabled)
+    }
+
+    fun setRagEnabled(enabled: Boolean) {
+        uiState = uiState.copy(isRagEnabled = enabled)
+        ragProvider.updateRagEnabled(enabled)
     }
 
 
