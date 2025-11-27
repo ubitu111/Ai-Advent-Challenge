@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.Card
+import androidx.compose.material.Checkbox
 import androidx.compose.material.DropdownMenu
 import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.MaterialTheme
@@ -272,6 +273,27 @@ fun SettingsScreen(
                         }
                     }
 
+                    // Reranking checkbox (only visible when RAG is enabled)
+                    if (uiState.isRagEnabled) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.setRerankingEnabled(!uiState.isRerankingEnabled) }
+                                .padding(vertical = 4.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = uiState.isRerankingEnabled,
+                                onCheckedChange = { viewModel.setRerankingEnabled(it) }
+                            )
+                            Text(
+                                text = Strings.RERANKING_ENABLED,
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.body1
+                            )
+                        }
+                    }
+
                     // Agent Selection section
                     Text(
                         text = Strings.AGENT_SELECTION_TITLE,
@@ -356,4 +378,3 @@ fun SettingsScreen(
         }
     }
 }
-

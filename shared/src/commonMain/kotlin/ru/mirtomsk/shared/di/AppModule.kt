@@ -43,6 +43,8 @@ import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.rag.OllamaApiService
 import ru.mirtomsk.shared.network.rag.RagProvider
+import ru.mirtomsk.shared.network.rag.RagReranker
+import ru.mirtomsk.shared.network.rag.RagRerankingProvider
 import ru.mirtomsk.shared.network.rag.RagService
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
@@ -198,10 +200,20 @@ val repositoryModule = module {
     }
 
     single {
+        RagReranker(
+            httpClient = get(),
+            baseUrl = "http://127.0.0.1:11434",
+            ioDispatcher = get<DispatchersProvider>().io,
+        )
+    }
+
+    single {
         RagService(
             ollamaApiService = get<OllamaApiService>(),
             embeddingsCache = get<EmbeddingsCache>(),
             embeddingsNormalizer = get<EmbeddingsNormalizer>(),
+            ragReranker = get<RagReranker>(),
+            ragRerankingProvider = get<RagRerankingProvider>(),
             ioDispatcher = get<DispatchersProvider>().io,
         )
     }
@@ -223,6 +235,7 @@ val settingsModule = module {
     single { MaxTokensProvider() }
     single { ContextCompressionProvider() }
     single { RagProvider() }
+    single { RagRerankingProvider() }
     single { McpToolsProvider() }
 }
 
@@ -250,6 +263,7 @@ val viewModelModule = module {
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
             ragProvider = get<RagProvider>(),
+            ragRerankingProvider = get<RagRerankingProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

@@ -107,8 +107,8 @@ class EmbeddingsRepositoryImpl(
 
 
     private companion object {
-        const val TARGET_CHUNK_SIZE = 50 // Средний размер чанка (500-600 токенов)
-        const val OVERLAP_SIZE = 5 // Перекрытие (50-60 токенов)
+        const val TARGET_CHUNK_SIZE = 100 // Средний размер чанка (500-600 токенов)
+        const val OVERLAP_SIZE = 10 // Перекрытие (50-60 токенов)
     }
 
     private data class ChunkInfo(

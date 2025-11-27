@@ -15,7 +15,12 @@ class OllamaApiService(
     suspend fun embed(text: String): FloatArray {
         val response: OllamaEmbeddingsResponse = httpClient.post("$baseUrl/api/embeddings") {
             contentType(ContentType.Application.Json)
-            setBody(OllamaEmbeddingsRequest(prompt = text))
+            setBody(
+                OllamaEmbeddingsRequest(
+                    model = OllamaEmbeddingsRequest.BGE_MODEL,
+                    prompt = text,
+                )
+            )
         }.body()
         return response.embedding.map { it.toFloat() }.toFloatArray()
     }
