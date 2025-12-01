@@ -74,6 +74,7 @@ class RagService(
 
         // Sort by similarity (descending) and take initial top K
         val initialTopChunks = chunksWithSimilarity
+            .filter { it.similarity > 0.7 }
             .sortedByDescending { it.similarity }
             .take(initialTopK)
 

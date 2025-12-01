@@ -109,20 +109,25 @@ class ChatRepositoryImpl(
             // Получаем текущий кеш
             val conversationCache = chatCache.getMessages().toMutableList()
 
-            // Добавляем системное сообщение, если кеш пуст
+            // Добавляем системное сообщение с базовым промптом, если кеш пуст
             if (conversationCache.isEmpty()) {
                 val basePrompt = selectPrompt(systemPrompt, format)
-                val ragContext = getRagContextIfEnabled(text)
-                val finalPrompt = if (ragContext != null) {
-                    "$basePrompt\n\n$ragContext"
-                } else {
-                    basePrompt
-                }
-                
                 conversationCache.add(
                     AiRequest.Message(
                         role = MessageRoleDto.SYSTEM,
-                        text = finalPrompt,
+                        text = basePrompt,
+                    )
+                )
+            }
+
+            // Получаем RAG контекст для текущего запроса (если RAG включен)
+            // Добавляем его перед пользовательским сообщением, если контекст найден
+            val ragContext = getRagContextIfEnabled(text)
+            if (ragContext != null) {
+                conversationCache.add(
+                    AiRequest.Message(
+                        role = MessageRoleDto.SYSTEM,
+                        text = ragContext,
                     )
                 )
             }
@@ -317,17 +322,17 @@ class ChatRepositoryImpl(
             // Получаем текущий кеш
             val conversationCache = chatCache.getMessages().toMutableList()
 
-            // Добавляем RAG контекст как системное сообщение, если кеш пуст и RAG включен
-            if (conversationCache.isEmpty()) {
-                val ragContext = getRagContextIfEnabled(text)
-                if (ragContext != null) {
-                    conversationCache.add(
-                        AiRequest.Message(
-                            role = MessageRoleDto.SYSTEM,
-                            text = ragContext,
-                        )
+            // Получаем RAG контекст для текущего запроса (если RAG включен)
+            // Добавляем его перед пользовательским сообщением, если контекст найден
+            // Это позволяет добавлять релевантный контекст для каждого запроса, даже если кеш не пуст
+            val ragContext = getRagContextIfEnabled(text)
+            if (ragContext != null) {
+                conversationCache.add(
+                    AiRequest.Message(
+                        role = MessageRoleDto.SYSTEM,
+                        text = ragContext,
                     )
-                }
+                )
             }
 
             // Добавляем текущее сообщение пользователя в кеш
