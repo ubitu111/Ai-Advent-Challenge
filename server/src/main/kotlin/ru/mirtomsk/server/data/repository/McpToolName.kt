@@ -161,33 +161,66 @@ enum class McpToolName(
 //            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key(), McpToolArgument.DATE.key())
 //        )
 //    ),
-    GIT_STATUS(
-        description = "Получить статус репозитория GitHub (информация о репозитории, последний коммит, ветка по умолчанию)",
+//    GIT_STATUS(
+//        description = "Получить статус репозитория GitHub (информация о репозитории, последний коммит, ветка по умолчанию)",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = emptyMap(),
+//            required = emptyList()
+//        )
+//    ),
+//    GIT_LOG(
+//        description = "Получить историю коммитов из GitHub репозитория (аналог git log)",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = mapOf(
+//                McpToolArgument.LIMIT.key() to McpToolProperty(
+//                    type = "number",
+//                    description = "Максимальное количество коммитов для отображения (по умолчанию: 30, максимум: 100)"
+//                ),
+//                McpToolArgument.BRANCH.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Имя ветки (опционально, по умолчанию используется ветка по умолчанию репозитория)"
+//                )
+//            ),
+//            required = emptyList()
+//        )
+//    ),
+//    GIT_BRANCH(
+//        description = "Получить список веток GitHub репозитория (аналог git branch)",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = emptyMap(),
+//            required = emptyList()
+//        )
+//    ),
+    GIT_STATUS_LOCAL(
+        description = "Получить статус локального Git репозитория (аналог git status)",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = emptyMap(),
             required = emptyList()
         )
     ),
-    GIT_LOG(
-        description = "Получить историю коммитов из GitHub репозитория (аналог git log)",
+    GIT_LOG_LOCAL(
+        description = "Получить историю коммитов локального Git репозитория (аналог git log)",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = mapOf(
                 McpToolArgument.LIMIT.key() to McpToolProperty(
                     type = "number",
-                    description = "Максимальное количество коммитов для отображения (по умолчанию: 30, максимум: 100)"
+                    description = "Максимальное количество коммитов для отображения (по умолчанию: 30, максимум: 1000)"
                 ),
                 McpToolArgument.BRANCH.key() to McpToolProperty(
                     type = "string",
-                    description = "Имя ветки (опционально, по умолчанию используется ветка по умолчанию репозитория)"
+                    description = "Имя ветки (опционально, по умолчанию используется текущая ветка)"
                 )
             ),
             required = emptyList()
         )
     ),
-    GIT_BRANCH(
-        description = "Получить список веток GitHub репозитория (аналог git branch)",
+    GIT_BRANCH_LOCAL(
+        description = "Получить список веток локального Git репозитория (аналог git branch)",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = emptyMap(),

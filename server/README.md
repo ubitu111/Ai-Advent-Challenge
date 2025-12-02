@@ -297,6 +297,19 @@ curl -X POST http://localhost:8080/mcp \
    - Параметры: нет
    - Требует настройки GitHub (см. раздел "Настройка GitHub API")
 
+9. **git_status_local** - Получить статус локального Git репозитория (аналог git status)
+   - Параметры: нет
+   - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
+10. **git_log_local** - Получить историю коммитов локального Git репозитория (аналог git log)
+    - Параметры: `limit` (number, опционально) - максимальное количество коммитов (по умолчанию: 30, максимум: 1000), `branch` (string, опционально) - имя ветки
+    - Пример: `{"limit": 10, "branch": "main"}` - получить последние 10 коммитов из ветки main
+    - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
+11. **git_branch_local** - Получить список веток локального Git репозитория (аналог git branch)
+    - Параметры: нет
+    - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
 ## Настройка GitHub API
 
 Для использования инструментов GitHub API (`git_status`, `git_log`, `git_branch`) необходимо настроить подключение к GitHub репозиторию.
@@ -323,7 +336,7 @@ curl -X POST http://localhost:8080/mcp \
 
 **Linux/macOS:**
 ```bash
-export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx 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
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 export GITHUB_OWNER=username
 export GITHUB_REPO=my-repo
 ```
@@ -451,6 +464,156 @@ curl -X POST http://localhost:8080/mcp \
     }
   }'
 ```
+
+## Настройка локального Git
+
+Для использования инструментов локального Git (`git_status_local`, `git_log_local`, `git_branch_local`) необходимо настроить путь к локальному Git репозиторию.
+
+### Шаг 1: Определение пути к репозиторию
+
+Убедитесь, что у вас есть локальный Git репозиторий. Путь должен указывать на корневую директорию репозитория (где находится папка `.git`).
+
+**Примеры путей:**
+- `/Users/username/projects/my-repo` (macOS/Linux)
+- `C:\Users\username\projects\my-repo` (Windows)
+- `/home/user/workspace/project` (Linux)
+
+### Шаг 2: Настройка переменных окружения
+
+Есть два способа настройки:
+
+#### Способ 1: Переменные окружения (рекомендуется)
+
+Установите переменную окружения перед запуском сервера:
+
+**Linux/macOS:**
+```bash
+export GIT_REPO_PATH=/path/to/your/repo
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:GIT_REPO_PATH="C:\path\to\your\repo"
+```
+
+**Windows (CMD):**
+```cmd
+set GIT_REPO_PATH=C:\path\to\your\repo
+```
+
+#### Способ 2: Системные свойства
+
+Запустите сервер с параметром:
+
+```bash
+./gradlew :server:run -Dgit.repo.path=/path/to/your/repo
+```
+
+### Шаг 3: Проверка настройки
+
+После настройки и запуска сервера, проверьте работу локальных Git инструментов:
+
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "git_status_local"
+    }
+  }'
+```
+
+Если настройка выполнена правильно, вы получите информацию о статусе локального репозитория. В противном случае будет возвращена ошибка с указанием на необходимость настройки.
+
+### Параметры конфигурации
+
+| Параметр | Описание | Пример |
+|----------|----------|--------|
+| `GIT_REPO_PATH` | Абсолютный путь к локальному Git репозиторию | `/Users/username/projects/my-repo` |
+
+### Требования
+
+- Git должен быть установлен в системе и доступен в PATH
+- Указанный путь должен существовать и быть валидным Git репозиторием (содержать папку `.git`)
+- Сервер должен иметь права на чтение репозитория
+
+### Примеры использования
+
+**Получить статус локального репозитория:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "git_status_local"
+    }
+  }'
+```
+
+**Получить последние 10 коммитов локального репозитория:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "git_log_local",
+      "arguments": {
+        "limit": 10
+      }
+    }
+  }'
+```
+
+**Получить коммиты из конкретной ветки:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "git_log_local",
+      "arguments": {
+        "limit": 20,
+        "branch": "develop"
+      }
+    }
+  }'
+```
+
+**Получить список всех веток:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "git_branch_local"
+    }
+  }'
+```
+
+### Разница между GitHub API и локальным Git
+
+| Функция | GitHub API | Локальный Git |
+|---------|------------|----------------|
+| **git_status** | Информация о репозитории на GitHub | Статус рабочей директории (измененные файлы, staging area) |
+| **git_log** | История коммитов из GitHub | История коммитов из локального репозитория |
+| **git_branch** | Список веток на GitHub | Список локальных веток |
+| **Требования** | Интернет, GitHub токен | Локальный Git, путь к репозиторию |
+| **Ограничения** | Лимит API запросов | Нет ограничений |
 
 ## Архитектура
 

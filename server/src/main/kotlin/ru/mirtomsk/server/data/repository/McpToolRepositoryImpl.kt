@@ -6,6 +6,7 @@ import ru.mirtomsk.server.domain.model.McpToolCallResult
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.GitHubService
+import ru.mirtomsk.server.domain.service.LocalGitService
 import ru.mirtomsk.server.domain.service.WeatherService
 import java.time.format.DateTimeFormatter
 
@@ -19,6 +20,7 @@ class McpToolRepositoryImpl(
     private val weatherService: WeatherService,
     private val currencyService: CurrencyService,
     private val gitHubService: GitHubService,
+    private val localGitService: LocalGitService,
 ) : McpToolRepository {
     
     override suspend fun getAllTools() = McpToolName.getAllTools()
@@ -37,9 +39,12 @@ class McpToolRepositoryImpl(
 //            McpToolName.GET_CURRENCY_RATE_HISTORICAL -> handleGetCurrencyRateHistorical(toolCall.arguments)
 //            McpToolName.GET_CITY_COORDINATES -> handleGetCityCoordinates(toolCall.arguments)
             McpToolName.GET_CURRENT_DATETIME -> handleGetCurrentDateTime()
-            McpToolName.GIT_STATUS -> handleGitStatus()
-            McpToolName.GIT_LOG -> handleGitLog(toolCall.arguments)
-            McpToolName.GIT_BRANCH -> handleGitBranch()
+//            McpToolName.GIT_STATUS -> handleGitStatus()
+//            McpToolName.GIT_LOG -> handleGitLog(toolCall.arguments)
+//            McpToolName.GIT_BRANCH -> handleGitBranch()
+            McpToolName.GIT_STATUS_LOCAL -> handleGitStatusLocal()
+            McpToolName.GIT_LOG_LOCAL -> handleGitLogLocal(toolCall.arguments)
+            McpToolName.GIT_BRANCH_LOCAL -> handleGitBranchLocal()
         }
     }
     
@@ -502,5 +507,114 @@ class McpToolRepositoryImpl(
      */
     private fun extractBranch(arguments: Map<String, Any>): String? {
         return arguments[McpToolArgument.BRANCH.key()] as? String
+    }
+    
+    // ==================== Local Git Tools ====================
+    
+    private suspend fun handleGitStatusLocal(): McpToolCallResult {
+        val status = localGitService.getRepositoryStatus()
+            ?: return createErrorResult("не удалось получить статус локального репозитория. Убедитесь, что GIT_REPO_PATH настроен правильно и указывает на валидный Git репозиторий")
+        
+        val result = buildString {
+            appendLine("Статус локального Git репозитория:")
+            appendLine("Текущая ветка: ${status.currentBranch}")
+            appendLine("Состояние: ${if (status.isClean) "чистое" else "есть изменения"}")
+            
+            if (status.lastCommit != null) {
+                appendLine("Последний коммит: ${status.lastCommit}")
+                if (status.lastCommitMessage != null) {
+                    appendLine("Сообщение: ${status.lastCommitMessage}")
+                }
+            }
+            
+            if (status.stagedFiles.isNotEmpty()) {
+                appendLine()
+                appendLine("Файлы в staging area (${status.stagedFiles.size}):")
+                status.stagedFiles.forEach { file ->
+                    appendLine("  + $file")
+                }
+            }
+            
+            if (status.modifiedFiles.isNotEmpty()) {
+                appendLine()
+                appendLine("Измененные файлы (${status.modifiedFiles.size}):")
+                status.modifiedFiles.forEach { file ->
+                    appendLine("  M $file")
+                }
+            }
+            
+            if (status.untrackedFiles.isNotEmpty()) {
+                appendLine()
+                appendLine("Неотслеживаемые файлы (${status.untrackedFiles.size}):")
+                status.untrackedFiles.forEach { file ->
+                    appendLine("  ? $file")
+                }
+            }
+            
+            if (status.isClean) {
+                appendLine()
+                appendLine("Рабочая директория чистая, нет изменений для коммита.")
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGitLogLocal(arguments: Map<String, Any>): McpToolCallResult {
+        val limit = extractLimitLocal(arguments)
+        val branch = extractBranch(arguments)
+        
+        val commits = localGitService.getCommitHistory(limit, branch)
+            ?: return createErrorResult("не удалось получить историю коммитов. Убедитесь, что GIT_REPO_PATH настроен правильно и указывает на валидный Git репозиторий")
+        
+        if (commits.isEmpty()) {
+            return createSuccessResult("История коммитов пуста")
+        }
+        
+        val result = buildString {
+            appendLine("История коммитов локального репозитория (${commits.size}):")
+            if (branch != null) {
+                appendLine("Ветка: $branch")
+            }
+            appendLine()
+            commits.forEachIndexed { index, commit ->
+                appendLine("${index + 1}. ${commit.sha} - ${commit.message}")
+                appendLine("   Автор: ${commit.author}")
+                appendLine("   Дата: ${commit.date}")
+                appendLine()
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGitBranchLocal(): McpToolCallResult {
+        val branches = localGitService.getBranches()
+            ?: return createErrorResult("не удалось получить список веток. Убедитесь, что GIT_REPO_PATH настроен правильно и указывает на валидный Git репозиторий")
+        
+        if (branches.isEmpty()) {
+            return createSuccessResult("Ветки не найдены")
+        }
+        
+        val result = buildString {
+            appendLine("Список веток локального репозитория (${branches.size}):")
+            appendLine()
+            branches.forEach { branch ->
+                val current = if (branch.isCurrent) "* " else "  "
+                appendLine("$current${branch.name} (${branch.lastCommitSha})")
+                if (branch.lastCommitMessage != null) {
+                    appendLine("    ${branch.lastCommitMessage}")
+                }
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    /**
+     * Extract limit argument from arguments map for local git (max 1000)
+     */
+    private fun extractLimitLocal(arguments: Map<String, Any>): Int {
+        return (arguments[McpToolArgument.LIMIT.key()] as? Number)?.toInt()?.coerceIn(1, 1000) ?: 30
     }
 }
