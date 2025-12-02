@@ -11,9 +11,11 @@ import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import ru.mirtomsk.server.data.repository.McpToolRepositoryImpl
 import ru.mirtomsk.server.data.service.ExchangeRateCurrencyService
+import ru.mirtomsk.server.data.service.GitHubApiService
 import ru.mirtomsk.server.data.service.OpenMeteoWeatherService
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.service.CurrencyService
+import ru.mirtomsk.server.domain.service.GitHubService
 import ru.mirtomsk.server.domain.service.WeatherService
 import ru.mirtomsk.server.domain.usecase.CallToolUseCase
 import ru.mirtomsk.server.domain.usecase.GetToolsUseCase
@@ -51,9 +53,10 @@ object ServerModule {
     // Services
     private val weatherService: WeatherService = OpenMeteoWeatherService(httpClient)
     private val currencyService: CurrencyService = ExchangeRateCurrencyService(httpClient)
+    private val gitHubService: GitHubService = GitHubApiService(httpClient)
 
     // Repository
-    private val mcpToolRepository: McpToolRepository = McpToolRepositoryImpl(weatherService, currencyService)
+    private val mcpToolRepository: McpToolRepository = McpToolRepositoryImpl(weatherService, currencyService, gitHubService)
 
     // Use cases
     val getToolsUseCase: GetToolsUseCase = GetToolsUseCase(mcpToolRepository)

@@ -5,6 +5,7 @@ import ru.mirtomsk.server.domain.model.McpToolCallContent
 import ru.mirtomsk.server.domain.model.McpToolCallResult
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.service.CurrencyService
+import ru.mirtomsk.server.domain.service.GitHubService
 import ru.mirtomsk.server.domain.service.WeatherService
 import java.time.format.DateTimeFormatter
 
@@ -16,7 +17,8 @@ import java.time.format.DateTimeFormatter
  */
 class McpToolRepositoryImpl(
     private val weatherService: WeatherService,
-    private val currencyService: CurrencyService
+    private val currencyService: CurrencyService,
+    private val gitHubService: GitHubService,
 ) : McpToolRepository {
     
     override suspend fun getAllTools() = McpToolName.getAllTools()
@@ -30,11 +32,14 @@ class McpToolRepositoryImpl(
 //            McpToolName.GET_CURRENT_WEATHER -> handleGetCurrentWeather(toolCall.arguments)
 //            McpToolName.GET_HOURLY_FORECAST -> handleGetHourlyForecast(toolCall.arguments)
 //            McpToolName.GET_WEATHER_BY_DATE -> handleGetWeatherByDate(toolCall.arguments)
-            McpToolName.CALCULATE -> handleCalculate(toolCall.arguments)
-            McpToolName.GET_CURRENCY_RATE -> handleGetCurrencyRate(toolCall.arguments)
-            McpToolName.GET_CURRENCY_RATE_HISTORICAL -> handleGetCurrencyRateHistorical(toolCall.arguments)
-            McpToolName.GET_CITY_COORDINATES -> handleGetCityCoordinates(toolCall.arguments)
+//            McpToolName.CALCULATE -> handleCalculate(toolCall.arguments)
+//            McpToolName.GET_CURRENCY_RATE -> handleGetCurrencyRate(toolCall.arguments)
+//            McpToolName.GET_CURRENCY_RATE_HISTORICAL -> handleGetCurrencyRateHistorical(toolCall.arguments)
+//            McpToolName.GET_CITY_COORDINATES -> handleGetCityCoordinates(toolCall.arguments)
             McpToolName.GET_CURRENT_DATETIME -> handleGetCurrentDateTime()
+            McpToolName.GIT_STATUS -> handleGitStatus()
+            McpToolName.GIT_LOG -> handleGitLog(toolCall.arguments)
+            McpToolName.GIT_BRANCH -> handleGitBranch()
         }
     }
     
@@ -413,5 +418,89 @@ class McpToolRepositoryImpl(
             }
             else -> cleanExpr.toDouble()
         }
+    }
+    
+    // ==================== GitHub Tools ====================
+    
+    private suspend fun handleGitStatus(): McpToolCallResult {
+        val status = gitHubService.getRepositoryStatus()
+            ?: return createErrorResult("не удалось получить статус репозитория. Убедитесь, что GitHub настроен правильно (GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO)")
+        
+        val result = buildString {
+            appendLine("Статус репозитория GitHub:")
+            appendLine("Репозиторий: ${status.fullName}")
+            appendLine("Описание: ${status.description ?: "Нет описания"}")
+            appendLine("Владелец: ${status.owner ?: "Неизвестно"}")
+            appendLine("Ветка по умолчанию: ${status.defaultBranch ?: "Неизвестно"}")
+            appendLine("Последнее обновление: ${status.lastUpdated ?: "Неизвестно"}")
+            appendLine("Последний push: ${status.lastPushed ?: "Неизвестно"}")
+            if (status.url != null) {
+                appendLine("URL: ${status.url}")
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGitLog(arguments: Map<String, Any>): McpToolCallResult {
+        val limit = extractLimit(arguments)
+        val branch = extractBranch(arguments)
+        
+        val commits = gitHubService.getCommitHistory(limit, branch)
+            ?: return createErrorResult("не удалось получить историю коммитов. Убедитесь, что GitHub настроен правильно (GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO)")
+        
+        if (commits.isEmpty()) {
+            return createSuccessResult("История коммитов пуста")
+        }
+        
+        val result = buildString {
+            appendLine("История коммитов (${commits.size}):")
+            appendLine()
+            commits.forEachIndexed { index, commit ->
+                appendLine("${index + 1}. ${commit.sha} - ${commit.message}")
+                appendLine("   Автор: ${commit.author} <${commit.authorEmail}>")
+                appendLine("   Дата: ${commit.date}")
+                if (commit.url != null) {
+                    appendLine("   URL: ${commit.url}")
+                }
+                appendLine()
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGitBranch(): McpToolCallResult {
+        val branches = gitHubService.getBranches()
+            ?: return createErrorResult("не удалось получить список веток. Убедитесь, что GitHub настроен правильно (GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO)")
+        
+        if (branches.isEmpty()) {
+            return createSuccessResult("Ветки не найдены")
+        }
+        
+        val result = buildString {
+            appendLine("Список веток (${branches.size}):")
+            appendLine()
+            branches.forEach { branch ->
+                val protected = if (branch.isProtected) " [защищена]" else ""
+                appendLine("  ${branch.name}${protected} (последний коммит: ${branch.lastCommitSha})")
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    /**
+     * Extract limit argument from arguments map
+     */
+    private fun extractLimit(arguments: Map<String, Any>): Int {
+        return (arguments[McpToolArgument.LIMIT.key()] as? Number)?.toInt()?.coerceIn(1, 100) ?: 30
+    }
+    
+    /**
+     * Extract branch argument from arguments map
+     */
+    private fun extractBranch(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.BRANCH.key()] as? String
     }
 }

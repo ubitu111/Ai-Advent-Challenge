@@ -88,32 +88,32 @@ enum class McpToolName(
 //            required = listOf(McpToolArgument.LATITUDE.key(), McpToolArgument.LONGITUDE.key(), McpToolArgument.DATE.key())
 //        )
 //    ),
-    CALCULATE(
-        description = "Выполнить математические вычисления",
-        inputSchema = McpToolInputSchema(
-            type = "object",
-            properties = mapOf(
-                McpToolArgument.EXPRESSION.key() to McpToolProperty(
-                    type = "string",
-                    description = "Математическое выражение для вычисления"
-                )
-            ),
-            required = listOf(McpToolArgument.EXPRESSION.key())
-        )
-    ),
-    GET_CITY_COORDINATES(
-        description = "Получить координаты (широту и долготу) для указанного города",
-        inputSchema = McpToolInputSchema(
-            type = "object",
-            properties = mapOf(
-                McpToolArgument.CITY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Название города"
-                )
-            ),
-            required = listOf(McpToolArgument.CITY.key())
-        )
-    ),
+//    CALCULATE(
+//        description = "Выполнить математические вычисления",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = mapOf(
+//                McpToolArgument.EXPRESSION.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Математическое выражение для вычисления"
+//                )
+//            ),
+//            required = listOf(McpToolArgument.EXPRESSION.key())
+//        )
+//    ),
+//    GET_CITY_COORDINATES(
+//        description = "Получить координаты (широту и долготу) для указанного города",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = mapOf(
+//                McpToolArgument.CITY.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Название города"
+//                )
+//            ),
+//            required = listOf(McpToolArgument.CITY.key())
+//        )
+//    ),
     GET_CURRENT_DATETIME(
         description = "Получить текущую дату и время в различных форматах (дата, время, ISO формат, день недели, день года, неделя года)",
         inputSchema = McpToolInputSchema(
@@ -122,45 +122,79 @@ enum class McpToolName(
             required = emptyList()
         )
     ),
-    GET_CURRENCY_RATE(
-        description = "Получить текущий курс обмена валют",
+
+    //    GET_CURRENCY_RATE(
+//        description = "Получить текущий курс обмена валют",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = mapOf(
+//                McpToolArgument.BASE_CURRENCY.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Базовая валюта (например: USD, EUR, RUB)"
+//                ),
+//                McpToolArgument.TARGET_CURRENCY.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Целевая валюта (например: USD, EUR, RUB)"
+//                )
+//            ),
+//            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key())
+//        )
+//    ),
+//    GET_CURRENCY_RATE_HISTORICAL(
+//        description = "Получить курс обмена валют за определенный прошлый день",
+//        inputSchema = McpToolInputSchema(
+//            type = "object",
+//            properties = mapOf(
+//                McpToolArgument.BASE_CURRENCY.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Базовая валюта (например: USD, EUR, RUB)"
+//                ),
+//                McpToolArgument.TARGET_CURRENCY.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Целевая валюта (например: USD, EUR, RUB)"
+//                ),
+//                McpToolArgument.DATE.key() to McpToolProperty(
+//                    type = "string",
+//                    description = "Дата в формате YYYY-MM-DD (например: 2024-01-15)"
+//                )
+//            ),
+//            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key(), McpToolArgument.DATE.key())
+//        )
+//    ),
+    GIT_STATUS(
+        description = "Получить статус репозитория GitHub (информация о репозитории, последний коммит, ветка по умолчанию)",
         inputSchema = McpToolInputSchema(
             type = "object",
-            properties = mapOf(
-                McpToolArgument.BASE_CURRENCY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Базовая валюта (например: USD, EUR, RUB)"
-                ),
-                McpToolArgument.TARGET_CURRENCY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Целевая валюта (например: USD, EUR, RUB)"
-                )
-            ),
-            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key())
+            properties = emptyMap(),
+            required = emptyList()
         )
     ),
-    GET_CURRENCY_RATE_HISTORICAL(
-        description = "Получить курс обмена валют за определенный прошлый день",
+    GIT_LOG(
+        description = "Получить историю коммитов из GitHub репозитория (аналог git log)",
         inputSchema = McpToolInputSchema(
             type = "object",
             properties = mapOf(
-                McpToolArgument.BASE_CURRENCY.key() to McpToolProperty(
-                    type = "string",
-                    description = "Базовая валюта (например: USD, EUR, RUB)"
+                McpToolArgument.LIMIT.key() to McpToolProperty(
+                    type = "number",
+                    description = "Максимальное количество коммитов для отображения (по умолчанию: 30, максимум: 100)"
                 ),
-                McpToolArgument.TARGET_CURRENCY.key() to McpToolProperty(
+                McpToolArgument.BRANCH.key() to McpToolProperty(
                     type = "string",
-                    description = "Целевая валюта (например: USD, EUR, RUB)"
-                ),
-                McpToolArgument.DATE.key() to McpToolProperty(
-                    type = "string",
-                    description = "Дата в формате YYYY-MM-DD (например: 2024-01-15)"
+                    description = "Имя ветки (опционально, по умолчанию используется ветка по умолчанию репозитория)"
                 )
             ),
-            required = listOf(McpToolArgument.BASE_CURRENCY.key(), McpToolArgument.TARGET_CURRENCY.key(), McpToolArgument.DATE.key())
+            required = emptyList()
+        )
+    ),
+    GIT_BRANCH(
+        description = "Получить список веток GitHub репозитория (аналог git branch)",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = emptyMap(),
+            required = emptyList()
         )
     );
-    
+
     /**
      * Convert enum to McpTool domain model
      */
@@ -171,7 +205,7 @@ enum class McpToolName(
             inputSchema = inputSchema
         )
     }
-    
+
     companion object {
         /**
          * Get all available tools as domain models
@@ -179,7 +213,7 @@ enum class McpToolName(
         fun getAllTools(): List<McpTool> {
             return entries.map { it.toMcpTool() }
         }
-        
+
         /**
          * Find tool by name (case-insensitive)
          */
