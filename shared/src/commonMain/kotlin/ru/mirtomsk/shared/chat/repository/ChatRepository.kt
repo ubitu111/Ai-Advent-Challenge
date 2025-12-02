@@ -6,6 +6,6 @@ import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
  * Repository interface for chat operations
  */
 interface ChatRepository {
-    suspend fun sendMessage(text: String): MessageResponseDto?
+    suspend fun sendMessage(text: String, forceRag: Boolean = false): MessageResponseDto?
 }
 

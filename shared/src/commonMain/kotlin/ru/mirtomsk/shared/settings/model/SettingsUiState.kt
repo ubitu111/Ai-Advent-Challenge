@@ -9,6 +9,4 @@ data class SettingsUiState(
     val temperature: String = Strings.DEFAULT_TEMPERATURE,
     val maxTokens: String = Strings.DEFAULT_MAX_TOKENS,
     val isCompressionEnabled: Boolean = false,
-    val isRagEnabled: Boolean = false,
-    val isRerankingEnabled: Boolean = false,
 )

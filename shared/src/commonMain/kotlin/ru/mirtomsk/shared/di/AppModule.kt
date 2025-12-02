@@ -42,7 +42,6 @@ import ru.mirtomsk.shared.network.mcp.McpService
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.rag.OllamaApiService
-import ru.mirtomsk.shared.network.rag.RagProvider
 import ru.mirtomsk.shared.network.rag.RagReranker
 import ru.mirtomsk.shared.network.rag.RagRerankingProvider
 import ru.mirtomsk.shared.network.rag.RagService
@@ -150,7 +149,6 @@ val repositoryModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
-            ragProvider = get<RagProvider>(),
             ragService = get<RagService>(),
             chatCache = get<ChatCache>(),
             mcpToolsProvider = get<McpToolsProvider>(),
@@ -234,7 +232,6 @@ val settingsModule = module {
     single { TemperatureProvider() }
     single { MaxTokensProvider() }
     single { ContextCompressionProvider() }
-    single { RagProvider() }
     single { RagRerankingProvider() }
     single { McpToolsProvider() }
 }
@@ -262,8 +259,6 @@ val viewModelModule = module {
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
             contextCompressionProvider = get<ContextCompressionProvider>(),
-            ragProvider = get<RagProvider>(),
-            ragRerankingProvider = get<RagRerankingProvider>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
     }

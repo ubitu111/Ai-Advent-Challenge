@@ -5,6 +5,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
@@ -12,6 +16,7 @@ import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.AiResponse
+import ru.mirtomsk.shared.chat.repository.model.FunctionCall
 import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
@@ -25,20 +30,14 @@ import ru.mirtomsk.shared.network.HuggingFaceToolProperty
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
-import ru.mirtomsk.shared.network.rag.RagProvider
-import ru.mirtomsk.shared.network.rag.RagService
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.mcp.model.McpTool
-import ru.mirtomsk.shared.chat.repository.model.FunctionCall
 import ru.mirtomsk.shared.network.prompt.SystemPromptDto
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
+import ru.mirtomsk.shared.network.rag.RagService
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 
@@ -59,7 +58,6 @@ class ChatRepositoryImpl(
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
     private val contextCompressionProvider: ContextCompressionProvider,
-    private val ragProvider: RagProvider,
     private val ragService: RagService,
     private val chatCache: ChatCache,
     private val mcpToolsProvider: McpToolsProvider,
@@ -72,14 +70,14 @@ class ChatRepositoryImpl(
     private var lastSystemPrompt: SystemPromptDto? = null
     private var lastResetCounter: Long = 0L
 
-    override suspend fun sendMessage(text: String): MessageResponseDto? {
+    override suspend fun sendMessage(text: String, forceRag: Boolean): MessageResponseDto? {
         return withContext(ioDispatcher) {
             val agentType = agentTypeProvider.agentType.first()
             val availableMcpTools = mcpToolsProvider.getAvailableTools()
             if (agentType.isYandexGpt) {
-                sendMessageYandexGpt(text, availableMcpTools)
+                sendMessageYandexGpt(text, availableMcpTools, forceRag)
             } else {
-                sendMessageHuggingFace(text, availableMcpTools)
+                sendMessageHuggingFace(text, availableMcpTools, forceRag)
             }
         }
     }
@@ -90,6 +88,7 @@ class ChatRepositoryImpl(
     private suspend fun sendMessageYandexGpt(
         text: String,
         availableMcpTools: List<McpTool>,
+        forceRag: Boolean,
     ): MessageResponseDto? {
         val format = formatProvider.responseFormat.first()
         val agentType = agentTypeProvider.agentType.first()
@@ -120,9 +119,9 @@ class ChatRepositoryImpl(
                 )
             }
 
-            // Получаем RAG контекст для текущего запроса (если RAG включен)
+            // Получаем RAG контекст для текущего запроса (если RAG включен или принудительно запрошен)
             // Добавляем его перед пользовательским сообщением, если контекст найден
-            val ragContext = getRagContextIfEnabled(text)
+            val ragContext = getRagContextIfEnabled(text, forceRag)
             if (ragContext != null) {
                 conversationCache.add(
                     AiRequest.Message(
@@ -167,14 +166,14 @@ class ChatRepositoryImpl(
             while (iterationCount < maxToolCallIterations) {
                 // Получаем tool calls из ответа (поддерживаем оба формата: toolCalls и toolCallList)
                 val message = currentResponse.result.alternatives.firstOrNull()?.message ?: break
-                val toolCalls = message.toolCallList?.toolCalls 
-                    ?: message.toolCalls 
+                val toolCalls = message.toolCallList?.toolCalls
+                    ?: message.toolCalls
                     ?: break
-                
+
                 if (toolCalls.isEmpty()) break
-                
+
                 iterationCount++
-                
+
                 // Добавляем сообщение ассистента с tool calls в кеш (если есть текст)
                 message.text?.let { textContent ->
                     val assistantMessageText = when (textContent) {
@@ -187,7 +186,7 @@ class ChatRepositoryImpl(
                             "${jsonResponse.title}\n${jsonResponse.text}$linksText"
                         }
                     }
-                    
+
                     conversationCache.add(
                         AiRequest.Message(
                             role = MessageRoleDto.ASSISTANT,
@@ -201,7 +200,7 @@ class ChatRepositoryImpl(
                 for (toolCall in toolCalls) {
                     try {
                         // Поддерживаем оба формата: function (OpenAI) и functionCall (Yandex GPT)
-                        val functionCall = toolCall.functionCall 
+                        val functionCall = toolCall.functionCall
                             ?: (toolCall.function?.let { func ->
                                 // Конвертируем OpenAI формат в Yandex GPT формат
                                 FunctionCall(
@@ -209,13 +208,13 @@ class ChatRepositoryImpl(
                                     arguments = try {
                                         json.parseToJsonElement(func.arguments).jsonObject
                                     } catch (e: Exception) {
-                                        kotlinx.serialization.json.buildJsonObject { 
-                                            put("input", func.arguments) 
+                                        buildJsonObject {
+                                            put("input", func.arguments)
                                         }
                                     }
                                 )
                             })
-                        
+
                         if (functionCall != null) {
                             // Преобразуем arguments из Map<String, JsonElement> в JSON строку для MCP
                             val argumentsJsonObject = buildJsonObject {
@@ -227,7 +226,7 @@ class ChatRepositoryImpl(
                                 kotlinx.serialization.json.JsonObject.serializer(),
                                 argumentsJsonObject
                             )
-                            
+
                             val toolResult = mcpOrchestrator.callTool(
                                 toolName = functionCall.name,
                                 arguments = argumentsJson
@@ -235,7 +234,8 @@ class ChatRepositoryImpl(
                             toolResults.add("Tool: ${functionCall.name}\nResult: $toolResult")
                         }
                     } catch (e: Exception) {
-                        val toolName = toolCall.functionCall?.name ?: toolCall.function?.name ?: "unknown"
+                        val toolName =
+                            toolCall.functionCall?.name ?: toolCall.function?.name ?: "unknown"
                         toolResults.add("Tool: $toolName\nError: ${e.message}")
                     }
                 }
@@ -260,7 +260,7 @@ class ChatRepositoryImpl(
                     messages = conversationCache,
                     tools = tools, // Передаем инструменты снова на случай, если нужны дополнительные вызовы
                 )
-                
+
                 val followUpResponseBody = chatApiService.requestYandexGpt(followUpRequest)
                 currentResponse = yandexResponseMapper.mapResponseBody(followUpResponseBody, format)
             }
@@ -284,9 +284,9 @@ class ChatRepositoryImpl(
 
             // Возвращаем сообщение с временем запроса и токенами
             assistantMessage?.let {
-                val messageText = assistantMessage.text 
+                val messageText = assistantMessage.text
                     ?: AiMessage.MessageContent.Text("") // Если text отсутствует (только tool calls), используем пустую строку
-                
+
                 MessageResponseDto(
                     role = assistantMessage.role,
                     text = messageText,
@@ -305,6 +305,7 @@ class ChatRepositoryImpl(
     private suspend fun sendMessageHuggingFace(
         text: String,
         availableMcpTools: List<McpTool>,
+        forceRag: Boolean,
     ): MessageResponseDto? {
         val agentType = agentTypeProvider.agentType.first()
         val temperature = temperatureProvider.temperature.first()
@@ -322,10 +323,10 @@ class ChatRepositoryImpl(
             // Получаем текущий кеш
             val conversationCache = chatCache.getMessages().toMutableList()
 
-            // Получаем RAG контекст для текущего запроса (если RAG включен)
+            // Получаем RAG контекст для текущего запроса (если RAG включен или принудительно запрошен)
             // Добавляем его перед пользовательским сообщением, если контекст найден
             // Это позволяет добавлять релевантный контекст для каждого запроса, даже если кеш не пуст
-            val ragContext = getRagContextIfEnabled(text)
+            val ragContext = getRagContextIfEnabled(text, forceRag)
             if (ragContext != null) {
                 conversationCache.add(
                     AiRequest.Message(
@@ -383,7 +384,7 @@ class ChatRepositoryImpl(
 
             while (huggingFaceResponse.toolCalls != null && huggingFaceResponse.toolCalls!!.isNotEmpty() && iterationCount < maxToolCallIterations) {
                 iterationCount++
-                
+
                 // Добавляем сообщение ассистента в кеш
                 addAssistantMessage(conversationCache, huggingFaceResponse.content)
 
@@ -429,7 +430,7 @@ class ChatRepositoryImpl(
                     parameters = parameters,
                     tools = tools, // Передаем инструменты снова на случай, если нужны дополнительные вызовы
                 )
-                
+
                 huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
             }
 
@@ -489,7 +490,8 @@ class ChatRepositoryImpl(
 
         if (compressedContext != null) {
             // Сохраняем системный промпт, если он был
-            val systemPromptMessage = conversationCache.firstOrNull { it.role == MessageRoleDto.SYSTEM }
+            val systemPromptMessage =
+                conversationCache.firstOrNull { it.role == MessageRoleDto.SYSTEM }
 
             // Очищаем кеш
             chatCache.clear()
@@ -500,7 +502,7 @@ class ChatRepositoryImpl(
                 newCache.add(systemPromptMessage)
             }
             addAssistantMessage(newCache, compressedContext)
-            
+
             // Сохраняем обновленный кеш
             chatCache.saveMessages(newCache)
         }
@@ -545,6 +547,7 @@ class ChatRepositoryImpl(
                 } else ""
                 "${jsonResponse.title}\n${jsonResponse.text}$linksText"
             }
+
             else -> AiMessage.MessageContent.Text(content.toString()).value
         }
     }
@@ -669,13 +672,11 @@ class ChatRepositoryImpl(
     }
 
     /**
-     * Получает RAG контекст, если RAG включен
+     * Получает RAG контекст, если RAG включен или принудительно запрошен
      */
-    private suspend fun getRagContextIfEnabled(query: String): String? {
-        val isRagEnabled = ragProvider.isRagEnabled.first()
-        if (!isRagEnabled) {
-            return null
-        }
+    private suspend fun getRagContextIfEnabled(query: String, forceRag: Boolean): String? {
+        if (!forceRag) return null
+
         return ragService.retrieveRelevantContext(query)
     }
 
@@ -716,7 +717,7 @@ class ChatRepositoryImpl(
                 mcpTool.description?.let { append(it) }
                 append(" (Доступен через MCP сервер. Используй этот инструмент, когда он нужен для ответа на вопрос пользователя.)")
             }
-            
+
             AiRequest.Tool(
                 type = "function",
                 function = AiRequest.ToolFunction(
@@ -749,7 +750,7 @@ class ChatRepositoryImpl(
                 mcpTool.description?.let { append(it) }
                 append(" (Доступен через MCP сервер. Используй этот инструмент, когда он нужен для ответа на вопрос пользователя.)")
             }
-            
+
             HuggingFaceTool(
                 type = "function",
                 function = HuggingFaceToolFunction(
