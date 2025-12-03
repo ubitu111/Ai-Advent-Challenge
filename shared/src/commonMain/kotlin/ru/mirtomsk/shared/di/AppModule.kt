@@ -3,9 +3,13 @@ package ru.mirtomsk.shared.di
 import kotlinx.serialization.json.Json
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
+import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
+import ru.mirtomsk.shared.chat.agent.DeveloperHelperAgent
+import ru.mirtomsk.shared.chat.agent.SimpleChatAgent
 import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
@@ -30,7 +34,6 @@ import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepository
 import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepositoryImpl
 import ru.mirtomsk.shared.network.ChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
-import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpApiService
@@ -114,8 +117,24 @@ val repositoryModule = module {
         }
     }
 
-    single<ChatCache> {
+    // Кеши для каждого агента
+    single<ChatCache>(named("simpleChatCache")) {
         FileChatCache(
+            cacheFileName = "simple_chat_cache.json",
+            json = get()
+        )
+    }
+
+    single<ChatCache>(named("codeReviewCache")) {
+        FileChatCache(
+            cacheFileName = "code_review_cache.json",
+            json = get()
+        )
+    }
+
+    single<ChatCache>(named("developerHelperCache")) {
+        FileChatCache(
+            cacheFileName = "developer_helper_cache.json",
             json = get()
         )
     }
@@ -126,23 +145,65 @@ val repositoryModule = module {
         )
     }
 
+    // Создание агентов
     single {
-        ChatRepositoryImpl(
+        SimpleChatAgent(
             chatApiService = get(),
             apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
             yandexResponseMapper = get<AiResponseMapper>(),
             formatProvider = get<ResponseFormatProvider>(),
-            agentTypeProvider = get<AgentTypeProvider>(),
-            contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
-            contextCompressionProvider = get<ContextCompressionProvider>(),
-            ragService = get<RagService>(),
-            chatCache = get<ChatCache>(),
+            chatCache = get(named("simpleChatCache")),
             mcpToolsProvider = get<McpToolsProvider>(),
             mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
+        )
+    }
+
+    single {
+        CodeReviewAgent(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            chatCache = get(named("codeReviewCache")),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
+            ragService = get<RagService>(),
+            json = get<Json>(),
+        )
+    }
+
+    single {
+        DeveloperHelperAgent(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            chatCache = get(named("developerHelperCache")),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
+            ragService = get<RagService>(),
+            json = get<Json>(),
+        )
+    }
+
+    // Репозиторий как оркестратор агентов
+    single {
+        ChatRepositoryImpl(
+            ioDispatcher = get<DispatchersProvider>().io,
+            contextResetProvider = get<ContextResetProvider>(),
+            simpleChatAgent = get<SimpleChatAgent>(),
+            codeReviewAgent = get<CodeReviewAgent>(),
+            developerHelperAgent = get<DeveloperHelperAgent>(),
         )
     }.bind<ChatRepository>()
 
@@ -215,7 +276,6 @@ val repositoryModule = module {
  */
 val settingsModule = module {
     single { ResponseFormatProvider() }
-    single { AgentTypeProvider() }
     single { ContextResetProvider() }
     single { TemperatureProvider() }
     single { MaxTokensProvider() }

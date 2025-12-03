@@ -3,7 +3,7 @@ package ru.mirtomsk.shared.network.agent
 /**
  * Model type enum for Yandex GPT models
  */
-enum class AgentTypeDto(
+enum class ModelTypeDto(
     val modelId: String,
 ) {
     // Yandex GPT models

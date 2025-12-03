@@ -12,10 +12,9 @@ import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
  * Использует JSON сериализацию для сохранения данных
  */
 class FileChatCache(
+    internal val cacheFileName: String = "chat_cache.json",
     private val json: Json = Json { ignoreUnknownKeys = true }
 ) : ChatCache {
-
-    internal val cacheFileName = "chat_cache.json"
 
     @Serializable
     private data class CacheData(
