@@ -284,6 +284,337 @@ curl -X POST http://localhost:8080/mcp \
    - Формат даты: YYYY-MM-DD (например: 2024-01-15)
    - Пример: `{"base_currency": "USD", "target_currency": "RUB", "date": "2024-01-15"}` - получить курс доллара к рублю на 15 января 2024 года
 
+6. **git_status** - Получить статус GitHub репозитория (информация о репозитории, последний коммит, ветка по умолчанию)
+   - Параметры: нет
+   - Требует настройки GitHub (см. раздел "Настройка GitHub API")
+
+7. **git_log** - Получить историю коммитов из GitHub репозитория (аналог git log)
+   - Параметры: `limit` (number, опционально) - максимальное количество коммитов (по умолчанию: 30, максимум: 100), `branch` (string, опционально) - имя ветки
+   - Пример: `{"limit": 10, "branch": "main"}` - получить последние 10 коммитов из ветки main
+   - Требует настройки GitHub (см. раздел "Настройка GitHub API")
+
+8. **git_branch** - Получить список веток GitHub репозитория (аналог git branch)
+   - Параметры: нет
+   - Требует настройки GitHub (см. раздел "Настройка GitHub API")
+
+9. **git_status_local** - Получить статус локального Git репозитория (аналог git status)
+   - Параметры: нет
+   - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
+10. **git_log_local** - Получить историю коммитов локального Git репозитория (аналог git log)
+    - Параметры: `limit` (number, опционально) - максимальное количество коммитов (по умолчанию: 30, максимум: 1000), `branch` (string, опционально) - имя ветки
+    - Пример: `{"limit": 10, "branch": "main"}` - получить последние 10 коммитов из ветки main
+    - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
+11. **git_branch_local** - Получить список веток локального Git репозитория (аналог git branch)
+    - Параметры: нет
+    - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
+## Настройка GitHub API
+
+Для использования инструментов GitHub API (`git_status`, `git_log`, `git_branch`) необходимо настроить подключение к GitHub репозиторию.
+
+### Шаг 1: Создание Personal Access Token (PAT)
+
+1. Перейдите на GitHub: https://github.com/settings/tokens
+2. Нажмите "Generate new token" → "Generate new token (classic)"
+3. Задайте название токена (например: "MCP Server")
+4. Выберите срок действия токена (рекомендуется: "No expiration" или "90 days")
+5. Выберите необходимые права доступа:
+   - Для публичных репозиториев: `public_repo` (доступ к публичным репозиториям)
+   - Для приватных репозиториев: `repo` (полный доступ к репозиториям)
+6. Нажмите "Generate token"
+7. **ВАЖНО**: Скопируйте токен сразу, он больше не будет показан! Токен выглядит как `ghp_xxxxxxxxxxxxxxxxxxxx`
+
+### Шаг 2: Настройка переменных окружения
+
+Есть два способа настройки:
+
+#### Способ 1: Переменные окружения (рекомендуется)
+
+Установите следующие переменные окружения перед запуском сервера:
+
+**Linux/macOS:**
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+export GITHUB_OWNER=username
+export GITHUB_REPO=my-repo
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxx"
+$env:GITHUB_OWNER="username"
+$env:GITHUB_REPO="my-repo"
+```
+
+**Windows (CMD):**
+```cmd
+set GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+set GITHUB_OWNER=username
+set GITHUB_REPO=my-repo
+```
+
+#### Способ 2: Системные свойства
+
+Запустите сервер с параметрами:
+
+```bash
+./gradlew :server:run -Dgithub.token=ghp_xxxxxxxxxxxxxxxxxxxx -Dgithub.owner=username -Dgithub.repo=my-repo
+```
+
+### Шаг 3: Проверка настройки
+
+После настройки и запуска сервера, проверьте работу GitHub инструментов:
+
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "git_status"
+    }
+  }'
+```
+
+Если настройка выполнена правильно, вы получите информацию о репозитории. В противном случае будет возвращена ошибка с указанием на необходимость настройки.
+
+### Параметры конфигурации
+
+| Параметр | Описание | Пример |
+|----------|----------|--------|
+| `GITHUB_TOKEN` | Personal Access Token для аутентификации в GitHub API | `ghp_xxxxxxxxxxxxxxxxxxxx` |
+| `GITHUB_OWNER` | Владелец репозитория (username или organization) | `octocat` или `github` |
+| `GITHUB_REPO` | Название репозитория | `Hello-World` |
+
+### Безопасность
+
+⚠️ **ВАЖНО**: Никогда не коммитьте токен в репозиторий!
+
+- Используйте переменные окружения или системные свойства
+- Добавьте `.env` файлы в `.gitignore` (если используете)
+- Для production используйте секретные менеджеры (AWS Secrets Manager, HashiCorp Vault и т.д.)
+- Регулярно обновляйте токены
+- Используйте минимально необходимые права доступа
+
+### Примеры использования
+
+**Получить статус репозитория:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "git_status"
+    }
+  }'
+```
+
+**Получить последние 10 коммитов:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "git_log",
+      "arguments": {
+        "limit": 10
+      }
+    }
+  }'
+```
+
+**Получить коммиты из конкретной ветки:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "git_log",
+      "arguments": {
+        "limit": 20,
+        "branch": "develop"
+      }
+    }
+  }'
+```
+
+**Получить список всех веток:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "git_branch"
+    }
+  }'
+```
+
+## Настройка локального Git
+
+Для использования инструментов локального Git (`git_status_local`, `git_log_local`, `git_branch_local`) необходимо настроить путь к локальному Git репозиторию.
+
+### Шаг 1: Определение пути к репозиторию
+
+Убедитесь, что у вас есть локальный Git репозиторий. Путь должен указывать на корневую директорию репозитория (где находится папка `.git`).
+
+**Примеры путей:**
+- `/Users/username/projects/my-repo` (macOS/Linux)
+- `C:\Users\username\projects\my-repo` (Windows)
+- `/home/user/workspace/project` (Linux)
+
+### Шаг 2: Настройка переменных окружения
+
+Есть два способа настройки:
+
+#### Способ 1: Переменные окружения (рекомендуется)
+
+Установите переменную окружения перед запуском сервера:
+
+**Linux/macOS:**
+```bash
+export GIT_REPO_PATH=/path/to/your/repo
+```
+
+**Windows (PowerShell):**
+```powershell
+$env:GIT_REPO_PATH="C:\path\to\your\repo"
+```
+
+**Windows (CMD):**
+```cmd
+set GIT_REPO_PATH=C:\path\to\your\repo
+```
+
+#### Способ 2: Системные свойства
+
+Запустите сервер с параметром:
+
+```bash
+./gradlew :server:run -Dgit.repo.path=/path/to/your/repo
+```
+
+### Шаг 3: Проверка настройки
+
+После настройки и запуска сервера, проверьте работу локальных Git инструментов:
+
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "git_status_local"
+    }
+  }'
+```
+
+Если настройка выполнена правильно, вы получите информацию о статусе локального репозитория. В противном случае будет возвращена ошибка с указанием на необходимость настройки.
+
+### Параметры конфигурации
+
+| Параметр | Описание | Пример |
+|----------|----------|--------|
+| `GIT_REPO_PATH` | Абсолютный путь к локальному Git репозиторию | `/Users/username/projects/my-repo` |
+
+### Требования
+
+- Git должен быть установлен в системе и доступен в PATH
+- Указанный путь должен существовать и быть валидным Git репозиторием (содержать папку `.git`)
+- Сервер должен иметь права на чтение репозитория
+
+### Примеры использования
+
+**Получить статус локального репозитория:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "git_status_local"
+    }
+  }'
+```
+
+**Получить последние 10 коммитов локального репозитория:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "git_log_local",
+      "arguments": {
+        "limit": 10
+      }
+    }
+  }'
+```
+
+**Получить коммиты из конкретной ветки:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "git_log_local",
+      "arguments": {
+        "limit": 20,
+        "branch": "develop"
+      }
+    }
+  }'
+```
+
+**Получить список всех веток:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "git_branch_local"
+    }
+  }'
+```
+
+### Разница между GitHub API и локальным Git
+
+| Функция | GitHub API | Локальный Git |
+|---------|------------|----------------|
+| **git_status** | Информация о репозитории на GitHub | Статус рабочей директории (измененные файлы, staging area) |
+| **git_log** | История коммитов из GitHub | История коммитов из локального репозитория |
+| **git_branch** | Список веток на GitHub | Список локальных веток |
+| **Требования** | Интернет, GitHub токен | Локальный Git, путь к репозиторию |
+| **Ограничения** | Лимит API запросов | Нет ограничений |
+
 ## Архитектура
 
 Сервер построен по принципам чистой архитектуры:
