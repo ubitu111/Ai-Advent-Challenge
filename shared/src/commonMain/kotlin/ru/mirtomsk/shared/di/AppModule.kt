@@ -39,7 +39,6 @@ import ru.mirtomsk.shared.network.mcp.McpRepository
 import ru.mirtomsk.shared.network.mcp.McpRepositoryImpl
 import ru.mirtomsk.shared.network.mcp.McpService
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
-import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.rag.OllamaApiService
 import ru.mirtomsk.shared.network.rag.RagReranker
 import ru.mirtomsk.shared.network.rag.RagRerankingProvider
@@ -135,7 +134,6 @@ val repositoryModule = module {
             yandexResponseMapper = get<AiResponseMapper>(),
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
-            systemPromptProvider = get<SystemPromptProvider>(),
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),
@@ -218,7 +216,6 @@ val repositoryModule = module {
 val settingsModule = module {
     single { ResponseFormatProvider() }
     single { AgentTypeProvider() }
-    single { SystemPromptProvider() }
     single { ContextResetProvider() }
     single { TemperatureProvider() }
     single { MaxTokensProvider() }
@@ -244,7 +241,6 @@ val viewModelModule = module {
     factory {
         SettingsViewModel(
             formatProvider = get<ResponseFormatProvider>(),
-            systemPromptProvider = get<SystemPromptProvider>(),
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),
             maxTokensProvider = get<MaxTokensProvider>(),

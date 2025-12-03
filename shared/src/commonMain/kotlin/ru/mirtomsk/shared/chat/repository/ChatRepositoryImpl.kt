@@ -28,8 +28,6 @@ import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.mcp.model.McpTool
-import ru.mirtomsk.shared.network.prompt.SystemPromptDto
-import ru.mirtomsk.shared.network.prompt.SystemPromptProvider
 import ru.mirtomsk.shared.network.rag.RagService
 import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
@@ -44,7 +42,6 @@ class ChatRepositoryImpl(
     private val yandexResponseMapper: AiResponseMapper,
     private val formatProvider: ResponseFormatProvider,
     private val agentTypeProvider: AgentTypeProvider,
-    private val systemPromptProvider: SystemPromptProvider,
     private val contextResetProvider: ContextResetProvider,
     private val temperatureProvider: TemperatureProvider,
     private val maxTokensProvider: MaxTokensProvider,
@@ -58,7 +55,6 @@ class ChatRepositoryImpl(
 
     private val cacheMutex = Mutex()
     private var lastAgentType: AgentTypeDto? = null
-    private var lastSystemPrompt: SystemPromptDto? = null
     private var lastResetCounter: Long = 0L
 
     override suspend fun sendMessage(text: String, forceRag: Boolean): MessageResponseDto? {
@@ -78,7 +74,6 @@ class ChatRepositoryImpl(
     ): MessageResponseDto? {
         val format = formatProvider.responseFormat.first()
         val agentType = agentTypeProvider.agentType.first()
-        val systemPrompt = systemPromptProvider.systemPrompt.first()
         val temperature = temperatureProvider.temperature.first()
         val maxTokens = maxTokensProvider.maxTokens.first()
         val resetCounter = contextResetProvider.resetCounter.first()
@@ -87,7 +82,6 @@ class ChatRepositoryImpl(
             // Управление кешем
             manageCache(
                 agentType = agentType,
-                systemPrompt = systemPrompt,
                 resetCounter = resetCounter
             )
 
@@ -96,11 +90,10 @@ class ChatRepositoryImpl(
 
             // Добавляем системное сообщение с базовым промптом, если кеш пуст
             if (conversationCache.isEmpty()) {
-                val basePrompt = selectPrompt(systemPrompt, format)
                 conversationCache.add(
                     AiRequest.Message(
                         role = MessageRoleDto.SYSTEM,
-                        text = basePrompt,
+                        text = Prompts.DEFAULT,
                     )
                 )
             }
@@ -310,7 +303,8 @@ class ChatRepositoryImpl(
         )
 
         // Отправляем запрос на сжатие
-        val compressedContext = compressContextYandexGpt(agentType, format, temperature, maxTokens, compressionMessages)
+        val compressedContext =
+            compressContextYandexGpt(agentType, format, temperature, maxTokens, compressionMessages)
 
         if (compressedContext != null) {
             // Сохраняем системный промпт, если он был
@@ -376,20 +370,17 @@ class ChatRepositoryImpl(
         }
     }
 
-
     /**
-     * Управление кешем разговора (общий метод для обоих типов моделей)
+     * Управление кешем разговора
      */
     private suspend fun manageCache(
         agentType: AgentTypeDto,
-        systemPrompt: SystemPromptDto?,
         resetCounter: Long
     ) {
         // Check if context was reset
         if (resetCounter != lastResetCounter) {
             chatCache.clear()
             lastAgentType = null
-            lastSystemPrompt = null
             lastResetCounter = resetCounter
         }
 
@@ -398,13 +389,7 @@ class ChatRepositoryImpl(
             chatCache.clear()
         }
 
-        // Check if system prompt changed (только для Yandex GPT)
-        if (systemPrompt != null && lastSystemPrompt != null && lastSystemPrompt != systemPrompt) {
-            chatCache.clear()
-        }
-
         lastAgentType = agentType
-        lastSystemPrompt = systemPrompt
     }
 
     /**
@@ -475,21 +460,6 @@ class ChatRepositoryImpl(
         if (!forceRag) return null
 
         return ragService.retrieveRelevantContext(query)
-    }
-
-    private fun selectPrompt(systemPrompt: SystemPromptDto, format: ResponseFormat): String {
-        val basePrompt = when (systemPrompt) {
-            SystemPromptDto.DEFAULT -> Prompts.DEFAULT
-            SystemPromptDto.SPECIFYING_QUESTIONS -> Prompts.SPECIFYING_QUESTIONS
-            SystemPromptDto.LOGIC_BY_STEP -> Prompts.LOGIC_BY_STEP
-            SystemPromptDto.LOGIC_AGENT_GROUP -> Prompts.LOGIC_GROUP
-            SystemPromptDto.LOGIC_SIMPLE -> Prompts.LOGIC_SIMPLE
-        }
-        val formatPrompt = when (format) {
-            ResponseFormat.DEFAULT -> Prompts.DEFAULT_FORMAT_RESPONSE
-            ResponseFormat.JSON -> Prompts.JSON_FORMAT_RESPONSE
-        }
-        return "$basePrompt$formatPrompt"
     }
 
     /**
