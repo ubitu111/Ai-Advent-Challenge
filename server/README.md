@@ -310,6 +310,12 @@ curl -X POST http://localhost:8080/mcp \
     - Параметры: нет
     - Требует настройки локального Git (см. раздел "Настройка локального Git")
 
+12. **git_diff_local** - Получить diff измененных файлов из локального Git репозитория (аналог git diff)
+    - Параметры: `file_path` (string, опционально) - путь к конкретному файлу, `staged` (boolean, опционально) - если true, возвращает diff для файлов в staging area (по умолчанию: false)
+    - Пример: `{"file_path": "src/main.kt", "staged": false}` - получить diff для конкретного файла
+    - Пример: `{"staged": true}` - получить diff для всех файлов в staging area
+    - Требует настройки локального Git (см. раздел "Настройка локального Git")
+
 ## Настройка GitHub API
 
 Для использования инструментов GitHub API (`git_status`, `git_log`, `git_branch`) необходимо настроить подключение к GitHub репозиторию.
@@ -605,6 +611,54 @@ curl -X POST http://localhost:8080/mcp \
   }'
 ```
 
+**Получить diff всех измененных файлов:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "tools/call",
+    "params": {
+      "name": "git_diff_local"
+    }
+  }'
+```
+
+**Получить diff для конкретного файла:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "tools/call",
+    "params": {
+      "name": "git_diff_local",
+      "arguments": {
+        "file_path": "src/main.kt"
+      }
+    }
+  }'
+```
+
+**Получить diff для файлов в staging area:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "tools/call",
+    "params": {
+      "name": "git_diff_local",
+      "arguments": {
+        "staged": true
+      }
+    }
+  }'
+```
+
 ### Разница между GitHub API и локальным Git
 
 | Функция | GitHub API | Локальный Git |
@@ -612,6 +666,7 @@ curl -X POST http://localhost:8080/mcp \
 | **git_status** | Информация о репозитории на GitHub | Статус рабочей директории (измененные файлы, staging area) |
 | **git_log** | История коммитов из GitHub | История коммитов из локального репозитория |
 | **git_branch** | Список веток на GitHub | Список локальных веток |
+| **git_diff** | - | Diff измененных файлов (аналог git diff) |
 | **Требования** | Интернет, GitHub токен | Локальный Git, путь к репозиторию |
 | **Ограничения** | Лимит API запросов | Нет ограничений |
 

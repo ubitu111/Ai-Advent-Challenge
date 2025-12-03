@@ -226,6 +226,23 @@ enum class McpToolName(
             properties = emptyMap(),
             required = emptyList()
         )
+    ),
+    GIT_DIFF_LOCAL(
+        description = "Получить diff измененных файлов из локального Git репозитория (аналог git diff)",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.FILE_PATH.key() to McpToolProperty(
+                    type = "string",
+                    description = "Путь к конкретному файлу (опционально, если не указан, возвращается diff всех измененных файлов)"
+                ),
+                McpToolArgument.STAGED.key() to McpToolProperty(
+                    type = "boolean",
+                    description = "Если true, возвращает diff для файлов в staging area (git diff --cached), иначе для неиндексированных изменений (по умолчанию: false)"
+                )
+            ),
+            required = emptyList()
+        )
     );
 
     /**
