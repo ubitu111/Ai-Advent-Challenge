@@ -12,7 +12,6 @@ import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.cache.FileChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
-import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
@@ -57,7 +56,6 @@ val configModule = module {
         ApiConfigImpl(
             apiKey = ApiConfigReader.readApiKey(),
             keyId = ApiConfigReader.readKeyId(),
-            huggingFaceToken = ApiConfigReader.readHuggingFaceToken(),
             mcpgateToken = ApiConfigReader.readMcpgateToken(),
         )
     }
@@ -130,18 +128,11 @@ val repositoryModule = module {
     }
 
     single {
-        HuggingFaceResponseMapper(
-            json = get()
-        )
-    }
-
-    single {
         ChatRepositoryImpl(
             chatApiService = get(),
             apiConfig = get(),
             ioDispatcher = get<DispatchersProvider>().io,
             yandexResponseMapper = get<AiResponseMapper>(),
-            huggingFaceResponseMapper = get<HuggingFaceResponseMapper>(),
             formatProvider = get<ResponseFormatProvider>(),
             agentTypeProvider = get<AgentTypeProvider>(),
             systemPromptProvider = get<SystemPromptProvider>(),
@@ -253,7 +244,6 @@ val viewModelModule = module {
     factory {
         SettingsViewModel(
             formatProvider = get<ResponseFormatProvider>(),
-            agentTypeProvider = get<AgentTypeProvider>(),
             systemPromptProvider = get<SystemPromptProvider>(),
             contextResetProvider = get<ContextResetProvider>(),
             temperatureProvider = get<TemperatureProvider>(),

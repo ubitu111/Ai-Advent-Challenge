@@ -12,7 +12,6 @@ import kotlinx.serialization.json.put
 import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
-import ru.mirtomsk.shared.chat.repository.mapper.HuggingFaceResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.AiResponse
@@ -21,12 +20,6 @@ import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
-import ru.mirtomsk.shared.network.HuggingFaceMessage
-import ru.mirtomsk.shared.network.HuggingFaceParameters
-import ru.mirtomsk.shared.network.HuggingFaceTool
-import ru.mirtomsk.shared.network.HuggingFaceToolFunction
-import ru.mirtomsk.shared.network.HuggingFaceToolParameters
-import ru.mirtomsk.shared.network.HuggingFaceToolProperty
 import ru.mirtomsk.shared.network.agent.AgentTypeDto
 import ru.mirtomsk.shared.network.agent.AgentTypeProvider
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
@@ -42,15 +35,13 @@ import ru.mirtomsk.shared.network.temperature.TemperatureProvider
 import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 
 /**
- * Unified implementation of ChatRepository for all AI models (Yandex GPT and HuggingFace)
- * Provides a single point of access for all model requests
+ * Implementation of ChatRepository for Yandex GPT Pro model
  */
 class ChatRepositoryImpl(
     private val chatApiService: ChatApiService,
     private val apiConfig: ApiConfig,
     private val ioDispatcher: CoroutineDispatcher,
     private val yandexResponseMapper: AiResponseMapper,
-    private val huggingFaceResponseMapper: HuggingFaceResponseMapper,
     private val formatProvider: ResponseFormatProvider,
     private val agentTypeProvider: AgentTypeProvider,
     private val systemPromptProvider: SystemPromptProvider,
@@ -72,13 +63,8 @@ class ChatRepositoryImpl(
 
     override suspend fun sendMessage(text: String, forceRag: Boolean): MessageResponseDto? {
         return withContext(ioDispatcher) {
-            val agentType = agentTypeProvider.agentType.first()
             val availableMcpTools = mcpToolsProvider.getAvailableTools()
-            if (agentType.isYandexGpt) {
-                sendMessageYandexGpt(text, availableMcpTools, forceRag)
-            } else {
-                sendMessageHuggingFace(text, availableMcpTools, forceRag)
-            }
+            sendMessageYandexGpt(text, availableMcpTools, forceRag)
         }
     }
 
@@ -299,164 +285,6 @@ class ChatRepositoryImpl(
         }
     }
 
-    /**
-     * Отправка сообщения для HuggingFace моделей
-     */
-    private suspend fun sendMessageHuggingFace(
-        text: String,
-        availableMcpTools: List<McpTool>,
-        forceRag: Boolean,
-    ): MessageResponseDto? {
-        val agentType = agentTypeProvider.agentType.first()
-        val temperature = temperatureProvider.temperature.first()
-        val maxTokens = maxTokensProvider.maxTokens.first()
-        val resetCounter = contextResetProvider.resetCounter.first()
-
-        return cacheMutex.withLock {
-            // Управление кешем
-            manageCache(
-                agentType = agentType,
-                systemPrompt = null,
-                resetCounter = resetCounter
-            )
-
-            // Получаем текущий кеш
-            val conversationCache = chatCache.getMessages().toMutableList()
-
-            // Получаем RAG контекст для текущего запроса (если RAG включен или принудительно запрошен)
-            // Добавляем его перед пользовательским сообщением, если контекст найден
-            // Это позволяет добавлять релевантный контекст для каждого запроса, даже если кеш не пуст
-            val ragContext = getRagContextIfEnabled(text, forceRag)
-            if (ragContext != null) {
-                conversationCache.add(
-                    AiRequest.Message(
-                        role = MessageRoleDto.SYSTEM,
-                        text = ragContext,
-                    )
-                )
-            }
-
-            // Добавляем текущее сообщение пользователя в кеш
-            addUserMessage(conversationCache, text)
-
-            // Преобразуем кеш в формат HuggingFace messages
-            val messages = conversationCache.map { message ->
-                HuggingFaceMessage(
-                    role = when (message.role) {
-                        MessageRoleDto.USER -> "user"
-                        MessageRoleDto.ASSISTANT -> "assistant"
-                        MessageRoleDto.SYSTEM -> "system"
-                    },
-                    content = message.text
-                )
-            }
-
-            // Формируем параметры запроса
-            val parameters = HuggingFaceParameters(
-                max_new_tokens = maxTokens,
-                temperature = temperature.toDouble(),
-            )
-
-            // Получаем доступные MCP инструменты
-            val tools = if (availableMcpTools.isNotEmpty()) {
-                convertMcpToolsToHuggingFaceFormat(availableMcpTools)
-            } else {
-                null
-            }
-
-            // Фиксируем время начала запроса
-            val requestStartTime = System.currentTimeMillis()
-
-            // Отправляем запрос и получаем сырой ответ
-            var rawResponse = chatApiService.requestHuggingFace(
-                model = agentType,
-                messages = messages,
-                parameters = parameters,
-                tools = tools,
-            )
-
-            // Парсим ответ через маппер
-            var huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
-
-            // Обрабатываем tool calls если они есть
-            var iterationCount = 0
-            val maxToolCallIterations = 5 // Ограничение на количество итераций вызовов инструментов
-
-            while (huggingFaceResponse.toolCalls != null && huggingFaceResponse.toolCalls!!.isNotEmpty() && iterationCount < maxToolCallIterations) {
-                iterationCount++
-
-                // Добавляем сообщение ассистента в кеш
-                addAssistantMessage(conversationCache, huggingFaceResponse.content)
-
-                // Вызываем каждый инструмент через MCP
-                val toolResults = mutableListOf<String>()
-                for (toolCall in huggingFaceResponse.toolCalls!!) {
-                    try {
-                        val toolResult = mcpOrchestrator.callTool(
-                            toolName = toolCall.function.name,
-                            arguments = toolCall.function.arguments
-                        )
-                        toolResults.add("Tool: ${toolCall.function.name}\nResult: $toolResult")
-                    } catch (e: Exception) {
-                        toolResults.add("Tool: ${toolCall.function.name}\nError: ${e.message}")
-                    }
-                }
-
-                // Добавляем результаты инструментов в контекст
-                val toolResultsText = toolResults.joinToString("\n\n")
-                conversationCache.add(
-                    AiRequest.Message(
-                        role = MessageRoleDto.USER,
-                        text = "Результаты вызова инструментов:\n$toolResultsText\n\nИспользуй эти результаты для формирования ответа пользователю."
-                    )
-                )
-
-                // Преобразуем обновленный кеш в формат HuggingFace messages
-                val updatedMessages = conversationCache.map { message ->
-                    HuggingFaceMessage(
-                        role = when (message.role) {
-                            MessageRoleDto.USER -> "user"
-                            MessageRoleDto.ASSISTANT -> "assistant"
-                            MessageRoleDto.SYSTEM -> "system"
-                        },
-                        content = message.text
-                    )
-                }
-
-                // Отправляем новый запрос с результатами инструментов
-                rawResponse = chatApiService.requestHuggingFace(
-                    model = agentType,
-                    messages = updatedMessages,
-                    parameters = parameters,
-                    tools = tools, // Передаем инструменты снова на случай, если нужны дополнительные вызовы
-                )
-
-                huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
-            }
-
-            // Фиксируем время окончания запроса
-            val requestEndTime = System.currentTimeMillis()
-
-            // Добавляем финальное сообщение ассистента в кеш
-            addAssistantMessage(conversationCache, huggingFaceResponse.content)
-
-            // Сохраняем обновленный кеш
-            chatCache.saveMessages(conversationCache)
-
-            // Проверяем необходимость сжатия контекста
-            compressContextIfNeeded(agentType, null, temperature, maxTokens)
-
-            // Возвращаем сообщение в формате AiMessage с временем запроса и токенами
-            MessageResponseDto(
-                role = MessageRoleDto.ASSISTANT,
-                text = AiMessage.MessageContent.Text(huggingFaceResponse.content),
-                requestTime = requestEndTime - requestStartTime,
-                promptTokens = huggingFaceResponse.promptTokens,
-                completionTokens = huggingFaceResponse.completionTokens,
-                totalTokens = huggingFaceResponse.totalTokens,
-            )
-        }
-    }
 
     /**
      * Сжатие контекста, если необходимо
@@ -482,11 +310,7 @@ class ChatRepositoryImpl(
         )
 
         // Отправляем запрос на сжатие
-        val compressedContext = if (agentType.isYandexGpt) {
-            compressContextYandexGpt(agentType, format, temperature, maxTokens, compressionMessages)
-        } else {
-            compressContextHuggingFace(agentType, temperature, maxTokens, compressionMessages)
-        }
+        val compressedContext = compressContextYandexGpt(agentType, format, temperature, maxTokens, compressionMessages)
 
         if (compressedContext != null) {
             // Сохраняем системный промпт, если он был
@@ -552,33 +376,6 @@ class ChatRepositoryImpl(
         }
     }
 
-    /**
-     * Сжатие контекста для HuggingFace
-     */
-    private suspend fun compressContextHuggingFace(
-        agentType: AgentTypeDto,
-        temperature: Float,
-        maxTokens: Int,
-        compressionMessages: List<AiRequest.Message>,
-    ): String? {
-        val messages = compressionMessages.map {
-            HuggingFaceMessage(role = it.role.name, content = it.text)
-        }
-
-        val parameters = HuggingFaceParameters(
-            max_new_tokens = maxTokens,
-            temperature = temperature.toDouble(),
-        )
-
-        val rawResponse = chatApiService.requestHuggingFace(
-            model = agentType,
-            messages = messages,
-            parameters = parameters,
-        )
-
-        val huggingFaceResponse = huggingFaceResponseMapper.mapResponseBody(rawResponse)
-        return huggingFaceResponse.content
-    }
 
     /**
      * Управление кешем разговора (общий метод для обоих типов моделей)
@@ -697,13 +494,10 @@ class ChatRepositoryImpl(
 
     /**
      * Получение имени модели Yandex GPT
+     * Всегда возвращает PRO модель
      */
     private fun getYandexModel(agentType: AgentTypeDto): String {
-        return when (agentType) {
-            AgentTypeDto.LITE -> MODEL_LITE
-            AgentTypeDto.PRO -> MODEL_PRO
-            else -> throw IllegalArgumentException("Model ${agentType.name} is not a Yandex GPT model")
-        }
+        return agentType.modelId
     }
 
 
@@ -740,42 +534,8 @@ class ChatRepositoryImpl(
         }
     }
 
-    /**
-     * Convert MCP tools to HuggingFace API format
-     * Adds information about MCP availability to tool descriptions
-     */
-    private fun convertMcpToolsToHuggingFaceFormat(mcpTools: List<McpTool>): List<HuggingFaceTool> {
-        return mcpTools.map { mcpTool ->
-            val enhancedDescription = buildString {
-                mcpTool.description?.let { append(it) }
-                append(" (Доступен через MCP сервер. Используй этот инструмент, когда он нужен для ответа на вопрос пользователя.)")
-            }
-
-            HuggingFaceTool(
-                type = "function",
-                function = HuggingFaceToolFunction(
-                    name = mcpTool.name,
-                    description = enhancedDescription,
-                    parameters = mcpTool.inputSchema?.let { schema ->
-                        HuggingFaceToolParameters(
-                            type = schema.type ?: "object",
-                            properties = schema.properties?.mapValues { (_, prop) ->
-                                HuggingFaceToolProperty(
-                                    type = prop.type,
-                                    description = prop.description
-                                )
-                            },
-                            required = schema.required
-                        )
-                    }
-                )
-            )
-        }
-    }
 
     private companion object {
-        const val MODEL_LITE = "yandexgpt-lite"
-        const val MODEL_PRO = "yandexgpt"
         const val MAX_CONTEXT_WINDOW_SIZE = 5
     }
 }

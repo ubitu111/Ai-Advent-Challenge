@@ -6,7 +6,6 @@ package ru.mirtomsk.shared.config
 interface ApiConfig {
     val apiKey: String
     val keyId: String
-    val huggingFaceToken: String
     val mcpgateToken: String
 }
 
@@ -17,7 +16,6 @@ interface ApiConfig {
 class ApiConfigImpl(
     override val apiKey: String,
     override val keyId: String,
-    override val huggingFaceToken: String,
     override val mcpgateToken: String,
 ) : ApiConfig
 

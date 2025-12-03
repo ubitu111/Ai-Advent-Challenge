@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Manages the current agent type and provides it as a Flow
  */
 class AgentTypeProvider {
-    private val _agentType = MutableStateFlow(AgentTypeDto.LITE)
+    private val _agentType = MutableStateFlow(AgentTypeDto.PRO)
     val agentType: StateFlow<AgentTypeDto> = _agentType.asStateFlow()
 
     fun updateAgentType(agentType: AgentTypeDto) {

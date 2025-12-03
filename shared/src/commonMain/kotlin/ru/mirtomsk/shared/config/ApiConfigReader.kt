@@ -17,10 +17,6 @@ object ApiConfigReader {
         return readProperty("api.key.id")
     }
 
-    fun readHuggingFaceToken(): String {
-        return readProperty("huggingface.token")
-    }
-
     fun readMcpgateToken(): String {
         return readProperty("mcpgate.token")
     }
