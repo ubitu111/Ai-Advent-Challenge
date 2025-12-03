@@ -53,8 +53,10 @@ class CodeReviewAgent(
         command: ChatCommand,
         conversationCache: MutableList<AiRequest.Message>
     ): String {
-        // Для ревью кода всегда используем RAG для получения контекста проекта
-        val ragContext = ragService.retrieveRelevantContext(text)
+        // Для ревью с параметрами используем RAG для получения контекста проекта
+        val ragContext = text
+            .takeIf { it.isNotBlank() }
+            ?.let { ragService.retrieveRelevantContext(it) }
         if (ragContext != null && ragContext.isNotBlank()) {
             conversationCache.add(
                 AiRequest.Message(
@@ -64,7 +66,25 @@ class CodeReviewAgent(
             )
         }
 
-        return text
+        // Если команда /review без параметров, добавляем промпт для ревью измененных файлов Git
+        return text.ifBlank {
+            conversationCache.add(
+                AiRequest.Message(
+                    role = MessageRoleDto.SYSTEM,
+                    text = """
+                    |Пользователь запросил ревью измененных файлов в Git репозитории.
+                    |
+                    |Твоя задача:
+                    |1. Используй MCP инструменты для получения измененных файлов Git
+                    |2. Используй при доступности MCP инструменты для получения содержимого каждого измененного файла
+                    |3. Проведи детальный ревью каждого измененного файла согласно правилам, указанным в твоем системном промпте
+                    |
+                    |Важно: Используй доступные MCP инструменты для получения информации о Git статусе и содержимом файлов.
+                    """.trimMargin()
+                )
+            )
+            return "Проведи ревью всех измененных файлов в Git репозитории. Используй MCP инструменты для получения статуса Git и содержимого файлов."
+        }
     }
 
     companion object {
