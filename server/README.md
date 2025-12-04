@@ -316,6 +316,15 @@ curl -X POST http://localhost:8080/mcp \
     - Пример: `{"staged": true}` - получить diff для всех файлов в staging area
     - Требует настройки локального Git (см. раздел "Настройка локального Git")
 
+13. **read_tickets** - Получить список всех созданных тикетов из CRM системы
+    - Параметры: нет
+    - Тикеты хранятся в JSON файле `tickets.json` в корне проекта
+
+14. **create_ticket** - Создать новый тикет в CRM системе
+    - Параметры: `username` (string, обязательный) - имя пользователя, `title` (string, обязательный) - заголовок тикета, `question` (string, обязательный) - вопрос или описание проблемы, `answer` (string, опционально) - ответ на тикет, `date` (string, опционально) - дата создания в формате YYYY-MM-DD (по умолчанию используется текущая дата)
+    - Пример: `{"username": "john_doe", "title": "Проблема с авторизацией", "question": "Не могу войти в систему"}` - создать тикет без ответа
+    - Пример: `{"username": "jane_smith", "title": "Вопрос о функционале", "question": "Как использовать новую функцию?", "answer": "Для использования новой функции..."}` - создать тикет с ответом
+
 ## Настройка GitHub API
 
 Для использования инструментов GitHub API (`git_status`, `git_log`, `git_branch`) необходимо настроить подключение к GitHub репозиторию.
@@ -654,6 +663,94 @@ curl -X POST http://localhost:8080/mcp \
       "name": "git_diff_local",
       "arguments": {
         "staged": true
+      }
+    }
+  }'
+```
+
+## Работа с CRM тикетами
+
+Инструменты для работы с тикетами позволяют создавать и читать тикеты из CRM системы. Тикеты хранятся в JSON файле `tickets.json` в корне проекта сервера.
+
+### Формат тикета
+
+Тикет содержит следующие поля:
+- `username` - имя пользователя, создавшего тикет
+- `date` - дата создания тикета (формат: YYYY-MM-DD)
+- `title` - заголовок тикета
+- `question` - вопрос или описание проблемы
+- `answer` - ответ на тикет (опционально)
+
+### Примеры использования
+
+**Получить список всех тикетов:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 8,
+    "method": "tools/call",
+    "params": {
+      "name": "read_tickets"
+    }
+  }'
+```
+
+**Создать новый тикет:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 9,
+    "method": "tools/call",
+    "params": {
+      "name": "create_ticket",
+      "arguments": {
+        "username": "john_doe",
+        "title": "Проблема с авторизацией",
+        "question": "Не могу войти в систему, выдает ошибку 401"
+      }
+    }
+  }'
+```
+
+**Создать тикет с ответом:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "tools/call",
+    "params": {
+      "name": "create_ticket",
+      "arguments": {
+        "username": "jane_smith",
+        "title": "Вопрос о функционале",
+        "question": "Как использовать новую функцию экспорта данных?",
+        "answer": "Для использования новой функции экспорта данных перейдите в раздел Настройки -> Экспорт и выберите нужный формат."
+      }
+    }
+  }'
+```
+
+**Создать тикет с указанной датой:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 11,
+    "method": "tools/call",
+    "params": {
+      "name": "create_ticket",
+      "arguments": {
+        "username": "admin",
+        "title": "Запрос на добавление функции",
+        "question": "Можно ли добавить возможность массового импорта пользователей?",
+        "date": "2024-12-22"
       }
     }
   }'
