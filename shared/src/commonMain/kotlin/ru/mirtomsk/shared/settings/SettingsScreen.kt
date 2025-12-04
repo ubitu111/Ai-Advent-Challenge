@@ -33,8 +33,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import ru.mirtomsk.shared.di.koinInject
-import ru.mirtomsk.shared.settings.model.AgentType
-import ru.mirtomsk.shared.settings.model.SystemPrompt
 
 @Composable
 fun SettingsScreen(
@@ -225,66 +223,6 @@ fun SettingsScreen(
                                 modifier = Modifier.padding(start = 8.dp),
                                 style = MaterialTheme.typography.body1
                             )
-                        }
-                    }
-
-                    // Agent Selection section
-                    Text(
-                        text = Strings.AGENT_SELECTION_TITLE,
-                        style = MaterialTheme.typography.subtitle1,
-                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                    )
-
-                    // Radio buttons group for agent type
-                    Column {
-                        AgentType.entries.forEach { agentType ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.setSelectedAgent(agentType) }
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = uiState.selectedAgent == agentType,
-                                    onClick = null
-                                )
-                                Text(
-                                    text = Strings.getAgentName(agentType),
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    style = MaterialTheme.typography.body1
-                                )
-                            }
-                        }
-                    }
-
-                    // System Prompt Selection section
-                    Text(
-                        text = Strings.SYSTEM_PROMPT_SELECTION_TITLE,
-                        style = MaterialTheme.typography.subtitle1,
-                        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                    )
-
-                    // Radio buttons group for system prompt
-                    Column {
-                        SystemPrompt.entries.forEach { systemPrompt ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.setSelectedSystemPrompt(systemPrompt) }
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = uiState.selectedSystemPrompt == systemPrompt,
-                                    onClick = null
-                                )
-                                Text(
-                                    text = Strings.getSystemPromptName(systemPrompt),
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    style = MaterialTheme.typography.body1
-                                )
-                            }
                         }
                     }
 

@@ -14,7 +14,9 @@ enum class McpToolArgument {
     LATITUDE,
     LONGITUDE,
     LIMIT,
-    BRANCH;
+    BRANCH,
+    FILE_PATH,
+    STAGED;
     
     /**
      * Get argument name as lowercase string (for JSON keys)

@@ -1,20 +1,60 @@
-package ru.mirtomsk.shared.chat.repository
+package ru.mirtomsk.shared.chat.agent
 
-object Prompts {
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.serialization.json.Json
+import ru.mirtomsk.shared.chat.repository.cache.ChatCache
+import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.model.AiRequest
+import ru.mirtomsk.shared.config.ApiConfig
+import ru.mirtomsk.shared.network.ChatApiService
+import ru.mirtomsk.shared.network.format.ResponseFormatProvider
+import ru.mirtomsk.shared.network.mcp.McpOrchestrator
+import ru.mirtomsk.shared.network.mcp.McpToolsProvider
+import ru.mirtomsk.shared.network.temperature.TemperatureProvider
+import ru.mirtomsk.shared.network.tokens.MaxTokensProvider
 
-    const val DEFAULT_FORMAT_RESPONSE = ""
-    const val JSON_FORMAT_RESPONSE = """
-                        Отвечай в формате JSON.
-                        Ответ должен быть валидным JSON объектом со следующей структурой:
-                        {
-                            "title": "краткий заголовок ответа",
-                            "text": "развернутый ответ на вопрос",
-                            "resource": "массив JSON объектов, в котором поле "link" с типом строка со ссылками, связанных с вопросом. Если ссылок нет, верни массив с одним объектом, внутри которого вместо ссылки слово 'отсутствуют'"
-                        }
-                        Всегда возвращай валидный JSON, даже если ответ короткий.
-                        """
+/**
+ * Простой чат агент
+ * Отвечает на вопросы пользователя, используя MCP инструменты при необходимости
+ */
+class SimpleChatAgent(
+    chatApiService: ChatApiService,
+    apiConfig: ApiConfig,
+    ioDispatcher: CoroutineDispatcher,
+    yandexResponseMapper: AiResponseMapper,
+    formatProvider: ResponseFormatProvider,
+    temperatureProvider: TemperatureProvider,
+    maxTokensProvider: MaxTokensProvider,
+    chatCache: ChatCache,
+    mcpToolsProvider: McpToolsProvider,
+    mcpOrchestrator: McpOrchestrator,
+    json: Json,
+) : BaseAiAgent(
+    name = "SimpleChatAgent",
+    systemPrompt = SIMPLE_CHAT_PROMPT,
+    chatApiService = chatApiService,
+    apiConfig = apiConfig,
+    ioDispatcher = ioDispatcher,
+    yandexResponseMapper = yandexResponseMapper,
+    formatProvider = formatProvider,
+    temperatureProvider = temperatureProvider,
+    maxTokensProvider = maxTokensProvider,
+    chatCache = chatCache,
+    mcpToolsProvider = mcpToolsProvider,
+    mcpOrchestrator = mcpOrchestrator,
+    json = json,
+) {
+    override suspend fun preprocessMessage(
+        text: String,
+        command: ChatCommand,
+        conversationCache: MutableList<AiRequest.Message>
+    ): String {
+        return text
+    }
 
-    const val DEFAULT = """Ты виртуальный помощник, специалист во многих областях знаний. 
+    companion object {
+        private const val SIMPLE_CHAT_PROMPT =
+            """Ты виртуальный помощник, специалист во многих областях знаний. 
 
 Ты имеешь доступ к различным инструментам через MCP (Model Context Protocol) сервер, которые позволяют тебе получать актуальную информацию и выполнять различные действия.
 
@@ -64,6 +104,6 @@ object Prompts {
   НЕПРАВИЛЬНО: Использовать дату из памяти для расчета
 
 Всегда стремись использовать доступные инструменты для того, чтобы дать максимально полный, актуальный и полезный ответ пользователю."""
-
-    const val CONTEXT_COMPRESSION = "Суммаризируй разговор."
+    }
 }
+

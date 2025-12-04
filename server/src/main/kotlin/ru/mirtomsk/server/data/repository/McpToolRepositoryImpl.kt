@@ -45,6 +45,7 @@ class McpToolRepositoryImpl(
             McpToolName.GIT_STATUS_LOCAL -> handleGitStatusLocal()
             McpToolName.GIT_LOG_LOCAL -> handleGitLogLocal(toolCall.arguments)
             McpToolName.GIT_BRANCH_LOCAL -> handleGitBranchLocal()
+            McpToolName.GIT_DIFF_LOCAL -> handleGitDiffLocal(toolCall.arguments)
         }
     }
     
@@ -616,5 +617,54 @@ class McpToolRepositoryImpl(
      */
     private fun extractLimitLocal(arguments: Map<String, Any>): Int {
         return (arguments[McpToolArgument.LIMIT.key()] as? Number)?.toInt()?.coerceIn(1, 1000) ?: 30
+    }
+
+    private suspend fun handleGitDiffLocal(arguments: Map<String, Any>): McpToolCallResult {
+        val filePath = extractFilePath(arguments)
+        val staged = extractStaged(arguments)
+
+        val diff = localGitService.getDiff(filePath, staged)
+            ?: return createErrorResult("не удалось получить diff. Убедитесь, что GIT_REPO_PATH настроен правильно и указывает на валидный Git репозиторий")
+
+        if (diff.isEmpty()) {
+            val message = when {
+                filePath != null && staged -> "Нет изменений для файла '$filePath' в staging area"
+                filePath != null -> "Нет неиндексированных изменений для файла '$filePath'"
+                staged -> "Нет изменений в staging area"
+                else -> "Нет неиндексированных изменений в рабочей директории"
+            }
+            return createSuccessResult(message)
+        }
+
+        val result = buildString {
+            if (filePath != null) {
+                appendLine("Diff для файла: $filePath")
+            } else {
+                appendLine("Diff всех измененных файлов")
+            }
+            if (staged) {
+                appendLine("(изменения в staging area)")
+            } else {
+                appendLine("(неиндексированные изменения)")
+            }
+            appendLine()
+            appendLine(diff)
+        }
+
+        return createSuccessResult(result.trim())
+    }
+
+    /**
+     * Extract file path argument from arguments map
+     */
+    private fun extractFilePath(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.FILE_PATH.key()] as? String
+    }
+
+    /**
+     * Extract staged argument from arguments map
+     */
+    private fun extractStaged(arguments: Map<String, Any>): Boolean {
+        return (arguments[McpToolArgument.STAGED.key()] as? Boolean) ?: false
     }
 }

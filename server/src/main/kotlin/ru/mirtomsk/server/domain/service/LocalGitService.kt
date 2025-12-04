@@ -21,6 +21,13 @@ interface LocalGitService {
      * Get list of branches (similar to git branch)
      */
     suspend fun getBranches(): List<LocalBranchInfo>?
+
+    /**
+     * Get diff of changed files (similar to git diff)
+     * @param filePath Optional file path to get diff for specific file
+     * @param staged If true, get diff for staged changes, otherwise for unstaged changes
+     */
+    suspend fun getDiff(filePath: String? = null, staged: Boolean = false): String?
 }
 
 /**

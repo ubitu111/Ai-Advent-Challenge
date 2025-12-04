@@ -55,26 +55,6 @@ class ChatViewModel(
         val currentInput = uiState.inputText.trim()
         if (currentInput.isBlank()) return
 
-        // Check if this is a /help command
-        val (messageText, forceRag) = if (currentInput.startsWith("/help")) {
-            val question = currentInput.removePrefix("/help").trim()
-            if (question.isBlank()) {
-                // If no question after /help, show error
-                val errorMessage = Message(
-                    content = MessageContent.Text("Пожалуйста, укажите вопрос после команды /help. Например: /help Как работает RAG?"),
-                    role = MessageRole.ASSISTANT
-                )
-                uiState = uiState.copy(
-                    messages = uiState.messages + errorMessage,
-                    inputText = ""
-                )
-                return
-            }
-            Pair(question, true)
-        } else {
-            Pair(currentInput, false)
-        }
-
         // Clear input immediately
         val userMessage = Message(
             content = MessageContent.Text(currentInput),
@@ -89,7 +69,7 @@ class ChatViewModel(
         // Request AI response
         viewmodelScope.launch {
             try {
-                val aiResponse = repository.sendMessage(messageText, forceRag)
+                val aiResponse = repository.sendMessage(currentInput)
 
                 if (aiResponse != null) {
                     val assistantMessage = when (val textContent = aiResponse.text) {
