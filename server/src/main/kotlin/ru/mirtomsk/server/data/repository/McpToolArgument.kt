@@ -20,7 +20,11 @@ enum class McpToolArgument {
     USERNAME,
     TITLE,
     QUESTION,
-    ANSWER;
+    ANSWER,
+    TASK_NAME,
+    TASK_DESCRIPTION,
+    PRIORITY,
+    STATUS;
     
     /**
      * Get argument name as lowercase string (for JSON keys)

@@ -14,11 +14,13 @@ import ru.mirtomsk.server.data.service.ExchangeRateCurrencyService
 import ru.mirtomsk.server.data.service.GitHubApiService
 import ru.mirtomsk.server.data.service.LocalGitCommandService
 import ru.mirtomsk.server.data.service.OpenMeteoWeatherService
+import ru.mirtomsk.server.data.service.TaskJsonService
 import ru.mirtomsk.server.data.service.TicketJsonService
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.GitHubService
 import ru.mirtomsk.server.domain.service.LocalGitService
+import ru.mirtomsk.server.domain.service.TaskService
 import ru.mirtomsk.server.domain.service.TicketService
 import ru.mirtomsk.server.domain.service.WeatherService
 import ru.mirtomsk.server.domain.usecase.CallToolUseCase
@@ -60,9 +62,10 @@ object ServerModule {
     private val gitHubService: GitHubService = GitHubApiService(httpClient)
     private val localGitService: LocalGitService = LocalGitCommandService()
     private val ticketService: TicketService = TicketJsonService()
+    private val taskService: TaskService = TaskJsonService()
 
     // Repository
-    private val mcpToolRepository: McpToolRepository = McpToolRepositoryImpl(weatherService, currencyService, gitHubService, localGitService, ticketService)
+    private val mcpToolRepository: McpToolRepository = McpToolRepositoryImpl(weatherService, currencyService, gitHubService, localGitService, ticketService, taskService)
 
     // Use cases
     val getToolsUseCase: GetToolsUseCase = GetToolsUseCase(mcpToolRepository)
