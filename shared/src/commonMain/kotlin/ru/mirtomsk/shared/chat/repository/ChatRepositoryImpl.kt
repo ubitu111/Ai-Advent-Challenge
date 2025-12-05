@@ -7,6 +7,7 @@ import ru.mirtomsk.shared.chat.agent.ChatCommand
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperHelperAgent
 import ru.mirtomsk.shared.chat.agent.SimpleChatAgent
+import ru.mirtomsk.shared.chat.agent.SupportAgent
 import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
 
@@ -20,6 +21,7 @@ class ChatRepositoryImpl(
     private val simpleChatAgent: SimpleChatAgent,
     private val codeReviewAgent: CodeReviewAgent,
     private val developerHelperAgent: DeveloperHelperAgent,
+    private val supportAgent: SupportAgent,
 ) : ChatRepository {
 
     private var lastResetCounter: Long = 0L
@@ -40,6 +42,7 @@ class ChatRepositoryImpl(
             val agent = when (command) {
                 ChatCommand.REVIEW -> codeReviewAgent
                 ChatCommand.HELP, ChatCommand.GIT -> developerHelperAgent
+                ChatCommand.SUPPORT -> supportAgent
                 ChatCommand.NONE -> simpleChatAgent
             }
 
@@ -55,5 +58,6 @@ class ChatRepositoryImpl(
         simpleChatAgent.clearCache()
         codeReviewAgent.clearCache()
         developerHelperAgent.clearCache()
+        supportAgent.clearCache()
     }
 }

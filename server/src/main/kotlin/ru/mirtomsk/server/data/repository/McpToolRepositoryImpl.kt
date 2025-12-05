@@ -4,10 +4,13 @@ import ru.mirtomsk.server.domain.model.McpToolCall
 import ru.mirtomsk.server.domain.model.McpToolCallContent
 import ru.mirtomsk.server.domain.model.McpToolCallResult
 import ru.mirtomsk.server.domain.repository.McpToolRepository
+import ru.mirtomsk.server.domain.model.Ticket
 import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.GitHubService
 import ru.mirtomsk.server.domain.service.LocalGitService
+import ru.mirtomsk.server.domain.service.TicketService
 import ru.mirtomsk.server.domain.service.WeatherService
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -21,6 +24,7 @@ class McpToolRepositoryImpl(
     private val currencyService: CurrencyService,
     private val gitHubService: GitHubService,
     private val localGitService: LocalGitService,
+    private val ticketService: TicketService,
 ) : McpToolRepository {
     
     override suspend fun getAllTools() = McpToolName.getAllTools()
@@ -46,6 +50,8 @@ class McpToolRepositoryImpl(
             McpToolName.GIT_LOG_LOCAL -> handleGitLogLocal(toolCall.arguments)
             McpToolName.GIT_BRANCH_LOCAL -> handleGitBranchLocal()
             McpToolName.GIT_DIFF_LOCAL -> handleGitDiffLocal(toolCall.arguments)
+            McpToolName.READ_TICKETS -> handleReadTickets()
+            McpToolName.CREATE_TICKET -> handleCreateTicket(toolCall.arguments)
         }
     }
     
@@ -666,5 +672,96 @@ class McpToolRepositoryImpl(
      */
     private fun extractStaged(arguments: Map<String, Any>): Boolean {
         return (arguments[McpToolArgument.STAGED.key()] as? Boolean) ?: false
+    }
+    
+    // ==================== Ticket Tools ====================
+    
+    private suspend fun handleReadTickets(): McpToolCallResult {
+        val tickets = ticketService.getAllTickets()
+        
+        if (tickets.isEmpty()) {
+            return createSuccessResult("Тикеты не найдены. Список тикетов пуст.")
+        }
+        
+        val result = buildString {
+            appendLine("Список тикетов (${tickets.size}):")
+            appendLine()
+            tickets.forEachIndexed { index, ticket ->
+                appendLine("${index + 1}. ${ticket.title}")
+                appendLine("   Пользователь: ${ticket.username}")
+                appendLine("   Дата: ${ticket.date}")
+                appendLine("   Вопрос: ${ticket.question}")
+                if (ticket.answer != null && ticket.answer.isNotBlank()) {
+                    appendLine("   Ответ: ${ticket.answer}")
+                } else {
+                    appendLine("   Ответ: (не указан)")
+                }
+                appendLine()
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleCreateTicket(arguments: Map<String, Any>): McpToolCallResult {
+        val username = extractUsername(arguments)
+            ?: return createErrorResult("не указано имя пользователя")
+        val title = extractTitle(arguments)
+            ?: return createErrorResult("не указан заголовок тикета")
+        val question = extractQuestion(arguments)
+            ?: return createErrorResult("не указан вопрос")
+        val answer = extractAnswer(arguments)
+        val date = extractDate(arguments) ?: LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        
+        val ticket = Ticket(
+            username = username,
+            date = date,
+            title = title,
+            question = question,
+            answer = answer
+        )
+        
+        val createdTicket = ticketService.createTicket(ticket)
+        
+        val result = buildString {
+            appendLine("Тикет успешно создан:")
+            appendLine("Заголовок: ${createdTicket.title}")
+            appendLine("Пользователь: ${createdTicket.username}")
+            appendLine("Дата: ${createdTicket.date}")
+            appendLine("Вопрос: ${createdTicket.question}")
+            if (createdTicket.answer != null && createdTicket.answer.isNotBlank()) {
+                appendLine("Ответ: ${createdTicket.answer}")
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    /**
+     * Extract username argument from arguments map
+     */
+    private fun extractUsername(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.USERNAME.key()] as? String
+    }
+    
+    /**
+     * Extract title argument from arguments map
+     */
+    private fun extractTitle(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.TITLE.key()] as? String
+    }
+    
+    /**
+     * Extract question argument from arguments map
+     */
+    private fun extractQuestion(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.QUESTION.key()] as? String
+    }
+    
+    /**
+     * Extract answer argument from arguments map
+     */
+    private fun extractAnswer(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.ANSWER.key()] as? String
     }
 }

@@ -10,6 +10,7 @@ import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperHelperAgent
 import ru.mirtomsk.shared.chat.agent.SimpleChatAgent
+import ru.mirtomsk.shared.chat.agent.SupportAgent
 import ru.mirtomsk.shared.chat.context.ContextResetProvider
 import ru.mirtomsk.shared.chat.repository.ChatRepository
 import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
@@ -139,6 +140,13 @@ val repositoryModule = module {
         )
     }
 
+    single<ChatCache>(named("supportCache")) {
+        FileChatCache(
+            cacheFileName = "support_cache.json",
+            json = get()
+        )
+    }
+
     single {
         AiResponseMapper(
             json = get()
@@ -196,6 +204,23 @@ val repositoryModule = module {
         )
     }
 
+    single {
+        SupportAgent(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            chatCache = get(named("supportCache")),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
+            ragService = get<RagService>(),
+            json = get<Json>(),
+        )
+    }
+
     // Репозиторий как оркестратор агентов
     single {
         ChatRepositoryImpl(
@@ -204,6 +229,7 @@ val repositoryModule = module {
             simpleChatAgent = get<SimpleChatAgent>(),
             codeReviewAgent = get<CodeReviewAgent>(),
             developerHelperAgent = get<DeveloperHelperAgent>(),
+            supportAgent = get<SupportAgent>(),
         )
     }.bind<ChatRepository>()
 

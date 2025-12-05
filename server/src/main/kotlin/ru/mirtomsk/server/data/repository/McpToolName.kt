@@ -243,6 +243,47 @@ enum class McpToolName(
             ),
             required = emptyList()
         )
+    ),
+    READ_TICKETS(
+        description = "Получить список всех созданных тикетов из CRM системы",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = emptyMap(),
+            required = emptyList()
+        )
+    ),
+    CREATE_TICKET(
+        description = "Создать новый тикет в CRM системе",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.USERNAME.key() to McpToolProperty(
+                    type = "string",
+                    description = "Имя пользователя, создающего тикет"
+                ),
+                McpToolArgument.TITLE.key() to McpToolProperty(
+                    type = "string",
+                    description = "Заголовок тикета"
+                ),
+                McpToolArgument.QUESTION.key() to McpToolProperty(
+                    type = "string",
+                    description = "Вопрос или описание проблемы в тикете"
+                ),
+                McpToolArgument.ANSWER.key() to McpToolProperty(
+                    type = "string",
+                    description = "Ответ на тикет (опционально, может быть заполнен позже)"
+                ),
+                McpToolArgument.DATE.key() to McpToolProperty(
+                    type = "string",
+                    description = "Дата создания тикета в формате YYYY-MM-DD (опционально, по умолчанию используется текущая дата)"
+                )
+            ),
+            required = listOf(
+                McpToolArgument.USERNAME.key(),
+                McpToolArgument.TITLE.key(),
+                McpToolArgument.QUESTION.key()
+            )
+        )
     );
 
     /**

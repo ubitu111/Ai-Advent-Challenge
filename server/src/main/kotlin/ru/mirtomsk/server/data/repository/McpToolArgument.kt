@@ -16,7 +16,11 @@ enum class McpToolArgument {
     LIMIT,
     BRANCH,
     FILE_PATH,
-    STAGED;
+    STAGED,
+    USERNAME,
+    TITLE,
+    QUESTION,
+    ANSWER;
     
     /**
      * Get argument name as lowercase string (for JSON keys)
