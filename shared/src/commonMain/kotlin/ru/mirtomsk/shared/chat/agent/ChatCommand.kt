@@ -8,6 +8,7 @@ enum class ChatCommand(val command: String, val description: String) {
     HELP("/help", "Помощь разработчика с использованием RAG"),
     GIT("/git", "Git команды через MCP"),
     SUPPORT("/support", "Поддержка пользователей с использованием RAG и CRM"),
+    DEVELOP("/develop", "Помощник команды разработчиков с RAG и MCP инструментами"),
     NONE("", "Обычный чат (без команды)");
 
     companion object {
@@ -37,6 +38,11 @@ enum class ChatCommand(val command: String, val description: String) {
             if (trimmed.startsWith(SUPPORT.command)) {
                 val query = trimmed.removePrefix(SUPPORT.command).trim()
                 return Pair(SUPPORT, query)
+            }
+            
+            if (trimmed.startsWith(DEVELOP.command)) {
+                val query = trimmed.removePrefix(DEVELOP.command).trim()
+                return Pair(DEVELOP, query)
             }
             
             return Pair(NONE, trimmed)
