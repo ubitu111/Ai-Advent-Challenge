@@ -24,7 +24,8 @@ enum class McpToolArgument {
     TASK_NAME,
     TASK_DESCRIPTION,
     PRIORITY,
-    STATUS;
+    STATUS,
+    APK_PATH;
     
     /**
      * Get argument name as lowercase string (for JSON keys)

@@ -338,6 +338,27 @@ enum class McpToolName(
             ),
             required = emptyList()
         )
+    ),
+    BUILD_RELEASE_APK(
+        description = "Собрать подписанный релизный APK из проекта Git репозитория, используя Gradle команды. Собранный APK будет сохранен в папку builds с датой и временем в названии",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = emptyMap(),
+            required = emptyList()
+        )
+    ),
+    UPLOAD_APK_TO_YANDEX_DISK(
+        description = "Загрузить APK файл на Яндекс Диск и получить публичную ссылку",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.APK_PATH.key() to McpToolProperty(
+                    type = "string",
+                    description = "Путь к APK файлу для загрузки"
+                )
+            ),
+            required = listOf(McpToolArgument.APK_PATH.key())
+        )
     );
 
     /**
