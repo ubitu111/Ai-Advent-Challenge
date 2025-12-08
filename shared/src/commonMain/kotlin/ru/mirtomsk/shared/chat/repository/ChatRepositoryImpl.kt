@@ -3,6 +3,7 @@ package ru.mirtomsk.shared.chat.repository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import ru.mirtomsk.shared.chat.agent.BuildAgent
 import ru.mirtomsk.shared.chat.agent.ChatCommand
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperAgent
@@ -24,6 +25,7 @@ class ChatRepositoryImpl(
     private val developerHelperAgent: DeveloperHelperAgent,
     private val supportAgent: SupportAgent,
     private val developerAgent: DeveloperAgent,
+    private val buildAgent: BuildAgent,
 ) : ChatRepository {
 
     private var lastResetCounter: Long = 0L
@@ -46,6 +48,7 @@ class ChatRepositoryImpl(
                 ChatCommand.HELP, ChatCommand.GIT -> developerHelperAgent
                 ChatCommand.SUPPORT -> supportAgent
                 ChatCommand.DEVELOP -> developerAgent
+                ChatCommand.BUILD -> buildAgent
                 ChatCommand.NONE -> simpleChatAgent
             }
 
@@ -63,5 +66,6 @@ class ChatRepositoryImpl(
         developerHelperAgent.clearCache()
         supportAgent.clearCache()
         developerAgent.clearCache()
+        buildAgent.clearCache()
     }
 }
