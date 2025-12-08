@@ -21,13 +21,32 @@ object ApiConfigReader {
         return readProperty("mcpgate.token")
     }
 
-    private fun readProperty(key: String): String {
+    fun readUseLocalModel(): Boolean {
+        return readProperty("local.model.enabled", "false").toBoolean()
+    }
 
+    fun readLocalModelBaseUrl(): String {
+        return readProperty("local.model.base.url", "http://localhost:11434")
+    }
+
+    fun readLocalModelName(): String {
+        return readProperty("local.model.name", "llama3.1:8b")
+    }
+
+    private fun readProperty(key: String): String {
         val properties = Properties()
         val resourceStream = getResourceInputStream("api.properties")
 
         resourceStream.use { properties.load(it) }
         return properties.getProperty(key)
+    }
+
+    private fun readProperty(key: String, defaultValue: String): String {
+        val properties = Properties()
+        val resourceStream = getResourceInputStream("api.properties")
+
+        resourceStream?.use { properties.load(it) }
+        return properties.getProperty(key, defaultValue)
     }
 }
 

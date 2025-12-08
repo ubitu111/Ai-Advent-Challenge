@@ -4,10 +4,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.serialization.json.Json
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.mapper.OpenAiResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
+import ru.mirtomsk.shared.network.LocalChatApiService
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
@@ -33,6 +35,8 @@ class SupportAgent(
     mcpOrchestrator: McpOrchestrator,
     private val ragService: RagService,
     json: Json,
+    localChatApiService: LocalChatApiService,
+    openAiResponseMapper: OpenAiResponseMapper,
 ) : BaseAiAgent(
     name = "SupportAgent",
     systemPrompt = SUPPORT_AGENT_PROMPT,
@@ -47,6 +51,8 @@ class SupportAgent(
     mcpToolsProvider = mcpToolsProvider,
     mcpOrchestrator = mcpOrchestrator,
     json = json,
+    localChatApiService = localChatApiService,
+    openAiResponseMapper = openAiResponseMapper,
 ) {
 
     override suspend fun preprocessMessage(
