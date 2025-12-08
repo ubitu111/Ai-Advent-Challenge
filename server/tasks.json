@@ -1,0 +1,58 @@
+[
+    {
+        "id": "cfe1055f-abb3-4b50-9618-bd81de61c452",
+        "name": "Создать Repository для VolunteersViewModel",
+        "description": "Создать Repository для VolunteersViewModel и устранить прямой доступ к DAO.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "8680e8fe-202e-4e6e-94b4-378bae552dfe",
+        "name": "Создать Repository для GroupsViewModel",
+        "description": "Создать Repository для GroupsViewModel и устранить прямой доступ к DAO.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "2d1d88cb-cfad-4f0b-a90a-0a7bf5916a08",
+        "name": "Создать Repository для MainViewModel",
+        "description": "Создать Repository для MainViewModel и устранить прямой доступ к DAO.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "fc7727c9-6a2d-4d9a-8082-7190da9a04e5",
+        "name": "Перевести ViewModel на BaseViewModel",
+        "description": "Перевести существующие ViewModel на использование BaseViewModel для унификации кода.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "39b7ce8a-9ab3-46a7-9786-f0fc771f37bf",
+        "name": "Заменить LiveData на Flow",
+        "description": "Заменить использование LiveData на Flow для улучшения работы с данными.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "777f17f5-762e-4e61-9a3c-aeaf989396b1",
+        "name": "Рефакторинг Fragments на современный подход",
+        "description": "Провести рефакторинг Fragments на современный подход для улучшения архитектуры.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "77dc8550-d587-42a8-91ec-240194357c0f",
+        "name": "Рефакторинг TabbedMainActivity",
+        "description": "Провести рефакторинг TabbedMainActivity для улучшения структуры и удобства использования.",
+        "priority": "MEDIUM",
+        "status": "NEW"
+    },
+    {
+        "id": "c8f4ea52-e5bf-42e0-88f8-41245274a223",
+        "name": "Реализовать авторизацию на экране входа",
+        "description": "Реализовать авторизацию на экране входа в приложение.",
+        "priority": "HIGH",
+        "status": "NEW"
+    }
+]

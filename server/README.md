@@ -325,6 +325,22 @@ curl -X POST http://localhost:8080/mcp \
     - Пример: `{"username": "john_doe", "title": "Проблема с авторизацией", "question": "Не могу войти в систему"}` - создать тикет без ответа
     - Пример: `{"username": "jane_smith", "title": "Вопрос о функционале", "question": "Как использовать новую функцию?", "answer": "Для использования новой функции..."}` - создать тикет с ответом
 
+15. **create_task** - Создать новую задачу
+    - Параметры: `task_name` (string, обязательный) - название задачи, `task_description` (string, обязательный) - описание задачи, `priority` (string, обязательный) - приоритет задачи. Возможные значения: LOW, MEDIUM, HIGH, `status` (string, опционально) - статус задачи. Возможные значения: NEW, IN_PROGRESS, COMPLETED (по умолчанию: NEW)
+    - Пример: `{"task_name": "Реализовать авторизацию", "task_description": "Добавить систему входа пользователей", "priority": "HIGH", "status": "NEW"}` - создать задачу с высоким приоритетом
+    - Пример: `{"task_name": "Исправить баг", "task_description": "Исправить ошибку в модуле платежей", "priority": "MEDIUM", "status": "IN_PROGRESS"}` - создать задачу в работе
+
+16. **get_all_tasks** - Получить список всех созданных задач
+    - Параметры: нет
+    - Задачи хранятся в JSON файле `tasks.json` в корне проекта сервера
+
+17. **get_tasks_by_priority_and_status** - Получить список задач по указанному приоритету и статусу
+    - Параметры: `priority` (string, опционально) - приоритет задачи. Возможные значения: LOW, MEDIUM, HIGH, `status` (string, опционально) - статус задачи. Возможные значения: NEW, IN_PROGRESS, COMPLETED
+    - Пример: `{"priority": "HIGH"}` - получить все задачи с высоким приоритетом
+    - Пример: `{"status": "IN_PROGRESS"}` - получить все задачи в работе
+    - Пример: `{"priority": "MEDIUM", "status": "NEW"}` - получить новые задачи со средним приоритетом
+    - Если параметры не указаны, возвращаются все задачи (аналогично `get_all_tasks`)
+
 ## Настройка GitHub API
 
 Для использования инструментов GitHub API (`git_status`, `git_log`, `git_branch`) необходимо настроить подключение к GitHub репозиторию.
@@ -751,6 +767,163 @@ curl -X POST http://localhost:8080/mcp \
         "title": "Запрос на добавление функции",
         "question": "Можно ли добавить возможность массового импорта пользователей?",
         "date": "2024-12-22"
+      }
+    }
+  }'
+```
+
+## Работа с задачами
+
+Инструменты для работы с задачами позволяют создавать и получать задачи. Задачи хранятся в JSON файле `tasks.json` в корне проекта сервера.
+
+### Формат задачи
+
+Задача содержит следующие поля:
+- `id` - уникальный идентификатор задачи (автоматически присваивается сервером при создании)
+- `name` - название задачи
+- `description` - описание задачи
+- `priority` - приоритет задачи. Возможные значения: LOW, MEDIUM, HIGH
+- `status` - статус задачи. Возможные значения: NEW, IN_PROGRESS, COMPLETED
+
+### Примеры использования
+
+**Создать новую задачу:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 12,
+    "method": "tools/call",
+    "params": {
+      "name": "create_task",
+      "arguments": {
+        "task_name": "Реализовать авторизацию",
+        "task_description": "Добавить систему входа пользователей с поддержкой JWT токенов",
+        "priority": "HIGH",
+        "status": "NEW"
+      }
+    }
+  }'
+```
+
+**Создать задачу в работе:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 13,
+    "method": "tools/call",
+    "params": {
+      "name": "create_task",
+      "arguments": {
+        "task_name": "Исправить баг в платежах",
+        "task_description": "Исправить ошибку при обработке платежей через Stripe",
+        "priority": "HIGH",
+        "status": "IN_PROGRESS"
+      }
+    }
+  }'
+```
+
+**Создать задачу без указания статуса (будет установлен статус NEW):**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 14,
+    "method": "tools/call",
+    "params": {
+      "name": "create_task",
+      "arguments": {
+        "task_name": "Добавить тесты",
+        "task_description": "Написать unit-тесты для модуля пользователей",
+        "priority": "MEDIUM"
+      }
+    }
+  }'
+```
+
+**Получить список всех задач:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 15,
+    "method": "tools/call",
+    "params": {
+      "name": "get_all_tasks"
+    }
+  }'
+```
+
+**Получить задачи с высоким приоритетом:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 16,
+    "method": "tools/call",
+    "params": {
+      "name": "get_tasks_by_priority_and_status",
+      "arguments": {
+        "priority": "HIGH"
+      }
+    }
+  }'
+```
+
+**Получить задачи в работе:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 17,
+    "method": "tools/call",
+    "params": {
+      "name": "get_tasks_by_priority_and_status",
+      "arguments": {
+        "status": "IN_PROGRESS"
+      }
+    }
+  }'
+```
+
+**Получить новые задачи со средним приоритетом:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 18,
+    "method": "tools/call",
+    "params": {
+      "name": "get_tasks_by_priority_and_status",
+      "arguments": {
+        "priority": "MEDIUM",
+        "status": "NEW"
+      }
+    }
+  }'
+```
+
+**Получить завершенные задачи:**
+```bash
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 19,
+    "method": "tools/call",
+    "params": {
+      "name": "get_tasks_by_priority_and_status",
+      "arguments": {
+        "status": "COMPLETED"
       }
     }
   }'

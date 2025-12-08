@@ -3,11 +3,14 @@ package ru.mirtomsk.server.data.repository
 import ru.mirtomsk.server.domain.model.McpToolCall
 import ru.mirtomsk.server.domain.model.McpToolCallContent
 import ru.mirtomsk.server.domain.model.McpToolCallResult
+import ru.mirtomsk.server.domain.model.TaskPriority
+import ru.mirtomsk.server.domain.model.TaskStatus
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.model.Ticket
 import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.GitHubService
 import ru.mirtomsk.server.domain.service.LocalGitService
+import ru.mirtomsk.server.domain.service.TaskService
 import ru.mirtomsk.server.domain.service.TicketService
 import ru.mirtomsk.server.domain.service.WeatherService
 import java.time.LocalDateTime
@@ -25,6 +28,7 @@ class McpToolRepositoryImpl(
     private val gitHubService: GitHubService,
     private val localGitService: LocalGitService,
     private val ticketService: TicketService,
+    private val taskService: TaskService,
 ) : McpToolRepository {
     
     override suspend fun getAllTools() = McpToolName.getAllTools()
@@ -52,6 +56,9 @@ class McpToolRepositoryImpl(
             McpToolName.GIT_DIFF_LOCAL -> handleGitDiffLocal(toolCall.arguments)
             McpToolName.READ_TICKETS -> handleReadTickets()
             McpToolName.CREATE_TICKET -> handleCreateTicket(toolCall.arguments)
+            McpToolName.CREATE_TASK -> handleCreateTask(toolCall.arguments)
+            McpToolName.GET_ALL_TASKS -> handleGetAllTasks()
+            McpToolName.GET_TASKS_BY_PRIORITY_AND_STATUS -> handleGetTasksByPriorityAndStatus(toolCall.arguments)
         }
     }
     
@@ -763,5 +770,135 @@ class McpToolRepositoryImpl(
      */
     private fun extractAnswer(arguments: Map<String, Any>): String? {
         return arguments[McpToolArgument.ANSWER.key()] as? String
+    }
+    
+    // ==================== Task Tools ====================
+    
+    private suspend fun handleCreateTask(arguments: Map<String, Any>): McpToolCallResult {
+        val taskName = extractTaskName(arguments)
+            ?: return createErrorResult("не указано название задачи")
+        val taskDescription = extractTaskDescription(arguments)
+            ?: return createErrorResult("не указано описание задачи")
+        val priorityString = extractPriorityString(arguments)
+            ?: return createErrorResult("не указан приоритет задачи")
+        val priority = TaskPriority.fromName(priorityString)
+            ?: return createErrorResult("неверный приоритет задачи. Возможные значения: ${TaskPriority.getAllNames().joinToString(", ")}")
+        val statusString = extractStatusString(arguments)
+        val status = if (statusString != null) {
+            TaskStatus.fromName(statusString)
+                ?: return createErrorResult("неверный статус задачи. Возможные значения: ${TaskStatus.getAllNames().joinToString(", ")}")
+        } else {
+            TaskStatus.NEW
+        }
+        
+        val task = taskService.createTask(taskName, taskDescription, priority, status)
+        
+        val result = buildString {
+            appendLine("Задача успешно создана:")
+            appendLine("ID: ${task.id}")
+            appendLine("Название: ${task.name}")
+            appendLine("Описание: ${task.description}")
+            appendLine("Приоритет: ${task.priority.displayName} (${task.priority.name})")
+            appendLine("Статус: ${task.status.displayName} (${task.status.name})")
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGetAllTasks(): McpToolCallResult {
+        val tasks = taskService.getAllTasks()
+        
+        if (tasks.isEmpty()) {
+            return createSuccessResult("Задачи не найдены. Список задач пуст.")
+        }
+        
+        val result = buildString {
+            appendLine("Список задач (${tasks.size}):")
+            appendLine()
+            tasks.forEachIndexed { index, task ->
+                appendLine("${index + 1}. ${task.name}")
+                appendLine("   ID: ${task.id}")
+                appendLine("   Описание: ${task.description}")
+                appendLine("   Приоритет: ${task.priority.displayName} (${task.priority.name})")
+                appendLine("   Статус: ${task.status.displayName} (${task.status.name})")
+                appendLine()
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    private suspend fun handleGetTasksByPriorityAndStatus(arguments: Map<String, Any>): McpToolCallResult {
+        val priorityString = extractPriorityString(arguments)
+        val priority = priorityString?.let { 
+            TaskPriority.fromName(it) 
+                ?: return createErrorResult("неверный приоритет задачи. Возможные значения: ${TaskPriority.getAllNames().joinToString(", ")}")
+        }
+        val statusString = extractStatusString(arguments)
+        val status = statusString?.let {
+            TaskStatus.fromName(it)
+                ?: return createErrorResult("неверный статус задачи. Возможные значения: ${TaskStatus.getAllNames().joinToString(", ")}")
+        }
+        
+        val tasks = taskService.getTasksByPriorityAndStatus(priority, status)
+        
+        if (tasks.isEmpty()) {
+            val filters = buildString {
+                if (priority != null) append("приоритет: ${priority.name}")
+                if (priority != null && status != null) append(", ")
+                if (status != null) append("статус: ${status.name}")
+            }
+            val filterText = if (filters.isNotEmpty()) " с фильтрами ($filters)" else ""
+            return createSuccessResult("Задачи$filterText не найдены.")
+        }
+        
+        val result = buildString {
+            val filters = buildString {
+                if (priority != null) append("приоритет: ${priority.name}")
+                if (priority != null && status != null) append(", ")
+                if (status != null) append("статус: ${status.name}")
+            }
+            val filterText = if (filters.isNotEmpty()) " (фильтры: $filters)" else ""
+            appendLine("Список задач${filterText} (${tasks.size}):")
+            appendLine()
+            tasks.forEachIndexed { index, task ->
+                appendLine("${index + 1}. ${task.name}")
+                appendLine("   ID: ${task.id}")
+                appendLine("   Описание: ${task.description}")
+                appendLine("   Приоритет: ${task.priority.displayName} (${task.priority.name})")
+                appendLine("   Статус: ${task.status.displayName} (${task.status.name})")
+                appendLine()
+            }
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    /**
+     * Extract task name argument from arguments map
+     */
+    private fun extractTaskName(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.TASK_NAME.key()] as? String
+    }
+    
+    /**
+     * Extract task description argument from arguments map
+     */
+    private fun extractTaskDescription(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.TASK_DESCRIPTION.key()] as? String
+    }
+    
+    /**
+     * Extract priority argument from arguments map as string
+     */
+    private fun extractPriorityString(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.PRIORITY.key()] as? String
+    }
+    
+    /**
+     * Extract status argument from arguments map as string
+     */
+    private fun extractStatusString(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.STATUS.key()] as? String
     }
 }

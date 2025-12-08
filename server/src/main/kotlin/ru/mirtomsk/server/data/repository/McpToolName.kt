@@ -284,6 +284,60 @@ enum class McpToolName(
                 McpToolArgument.QUESTION.key()
             )
         )
+    ),
+    CREATE_TASK(
+        description = "Создать новую задачу",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.TASK_NAME.key() to McpToolProperty(
+                    type = "string",
+                    description = "Название задачи"
+                ),
+                McpToolArgument.TASK_DESCRIPTION.key() to McpToolProperty(
+                    type = "string",
+                    description = "Описание задачи"
+                ),
+                McpToolArgument.PRIORITY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Приоритет задачи. Возможные значения: LOW, MEDIUM, HIGH"
+                ),
+                McpToolArgument.STATUS.key() to McpToolProperty(
+                    type = "string",
+                    description = "Статус задачи. Возможные значения: NEW, IN_PROGRESS, COMPLETED (по умолчанию: NEW, если не указан)"
+                )
+            ),
+            required = listOf(
+                McpToolArgument.TASK_NAME.key(),
+                McpToolArgument.TASK_DESCRIPTION.key(),
+                McpToolArgument.PRIORITY.key()
+            )
+        )
+    ),
+    GET_ALL_TASKS(
+        description = "Получить список всех созданных задач",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = emptyMap(),
+            required = emptyList()
+        )
+    ),
+    GET_TASKS_BY_PRIORITY_AND_STATUS(
+        description = "Получить список задач по указанному приоритету и статусу",
+        inputSchema = McpToolInputSchema(
+            type = "object",
+            properties = mapOf(
+                McpToolArgument.PRIORITY.key() to McpToolProperty(
+                    type = "string",
+                    description = "Приоритет задачи. Возможные значения: LOW, MEDIUM, HIGH (опционально, если не указан, фильтрация по приоритету не применяется)"
+                ),
+                McpToolArgument.STATUS.key() to McpToolProperty(
+                    type = "string",
+                    description = "Статус задачи. Возможные значения: NEW, IN_PROGRESS, COMPLETED (опционально, если не указан, фильтрация по статусу не применяется)"
+                )
+            ),
+            required = emptyList()
+        )
     );
 
     /**
