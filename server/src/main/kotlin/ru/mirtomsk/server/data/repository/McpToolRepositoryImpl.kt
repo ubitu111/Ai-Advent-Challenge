@@ -7,12 +7,14 @@ import ru.mirtomsk.server.domain.model.TaskPriority
 import ru.mirtomsk.server.domain.model.TaskStatus
 import ru.mirtomsk.server.domain.repository.McpToolRepository
 import ru.mirtomsk.server.domain.model.Ticket
+import ru.mirtomsk.server.domain.service.BuildApkService
 import ru.mirtomsk.server.domain.service.CurrencyService
 import ru.mirtomsk.server.domain.service.GitHubService
 import ru.mirtomsk.server.domain.service.LocalGitService
 import ru.mirtomsk.server.domain.service.TaskService
 import ru.mirtomsk.server.domain.service.TicketService
 import ru.mirtomsk.server.domain.service.WeatherService
+import ru.mirtomsk.server.domain.service.YandexDiskService
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -29,6 +31,8 @@ class McpToolRepositoryImpl(
     private val localGitService: LocalGitService,
     private val ticketService: TicketService,
     private val taskService: TaskService,
+    private val buildApkService: BuildApkService,
+    private val yandexDiskService: YandexDiskService,
 ) : McpToolRepository {
     
     override suspend fun getAllTools() = McpToolName.getAllTools()
@@ -59,6 +63,8 @@ class McpToolRepositoryImpl(
             McpToolName.CREATE_TASK -> handleCreateTask(toolCall.arguments)
             McpToolName.GET_ALL_TASKS -> handleGetAllTasks()
             McpToolName.GET_TASKS_BY_PRIORITY_AND_STATUS -> handleGetTasksByPriorityAndStatus(toolCall.arguments)
+            McpToolName.BUILD_RELEASE_APK -> handleBuildReleaseApk()
+            McpToolName.UPLOAD_APK_TO_YANDEX_DISK -> handleUploadApkToYandexDisk(toolCall.arguments)
         }
     }
     
@@ -900,5 +906,47 @@ class McpToolRepositoryImpl(
      */
     private fun extractStatusString(arguments: Map<String, Any>): String? {
         return arguments[McpToolArgument.STATUS.key()] as? String
+    }
+    
+    // ==================== Build APK Tools ====================
+    
+    private suspend fun handleBuildReleaseApk(): McpToolCallResult {
+        val apkPath = buildApkService.buildReleaseApk()
+            ?: return createErrorResult("не удалось собрать APK. Убедитесь, что проект настроен правильно и Gradle доступен")
+        
+        val result = buildString {
+            appendLine("APK успешно собран!")
+            appendLine("Путь к файлу: $apkPath")
+            appendLine()
+            appendLine("APK сохранен в папку builds с датой и временем в названии.")
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    // ==================== Yandex Disk Tools ====================
+    
+    private suspend fun handleUploadApkToYandexDisk(arguments: Map<String, Any>): McpToolCallResult {
+        val apkPath = extractApkPath(arguments)
+            ?: return createErrorResult("не указан путь к APK файлу")
+        
+        val publicUrl = yandexDiskService.uploadFile(apkPath)
+            ?: return createErrorResult("не удалось загрузить APK на Яндекс Диск. Убедитесь, что YANDEX_DISK_TOKEN настроен правильно")
+        
+        val result = buildString {
+            appendLine("APK успешно загружен на Яндекс Диск!")
+            appendLine("Публичная ссылка: $publicUrl")
+            appendLine()
+            appendLine("Файл доступен по указанной ссылке для скачивания.")
+        }
+        
+        return createSuccessResult(result.trim())
+    }
+    
+    /**
+     * Extract APK path argument from arguments map
+     */
+    private fun extractApkPath(arguments: Map<String, Any>): String? {
+        return arguments[McpToolArgument.APK_PATH.key()] as? String
     }
 }

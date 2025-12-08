@@ -7,6 +7,7 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
+import ru.mirtomsk.shared.chat.agent.BuildAgent
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperHelperAgent
@@ -155,6 +156,13 @@ val repositoryModule = module {
         )
     }
 
+    single<ChatCache>(named("buildCache")) {
+        FileChatCache(
+            cacheFileName = "build_cache.json",
+            json = get()
+        )
+    }
+
     single {
         AiResponseMapper(
             json = get()
@@ -246,6 +254,22 @@ val repositoryModule = module {
         )
     }
 
+    single {
+        BuildAgent(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            chatCache = get(named("buildCache")),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
+            json = get<Json>(),
+        )
+    }
+
     // Репозиторий как оркестратор агентов
     single {
         ChatRepositoryImpl(
@@ -256,6 +280,7 @@ val repositoryModule = module {
             developerHelperAgent = get<DeveloperHelperAgent>(),
             supportAgent = get<SupportAgent>(),
             developerAgent = get<DeveloperAgent>(),
+            buildAgent = get<BuildAgent>(),
         )
     }.bind<ChatRepository>()
 
