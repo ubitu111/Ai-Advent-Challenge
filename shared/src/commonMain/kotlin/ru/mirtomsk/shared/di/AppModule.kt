@@ -19,6 +19,7 @@ import ru.mirtomsk.shared.chat.repository.ChatRepositoryImpl
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.cache.FileChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.mapper.OpenAiResponseMapper
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.config.ApiConfigImpl
 import ru.mirtomsk.shared.config.ApiConfigReader
@@ -36,6 +37,7 @@ import ru.mirtomsk.shared.embeddings.createFilePicker
 import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepository
 import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepositoryImpl
 import ru.mirtomsk.shared.network.ChatApiService
+import ru.mirtomsk.shared.network.LocalChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
@@ -62,6 +64,9 @@ val configModule = module {
             apiKey = ApiConfigReader.readApiKey(),
             keyId = ApiConfigReader.readKeyId(),
             mcpgateToken = ApiConfigReader.readMcpgateToken(),
+            useLocalModel = ApiConfigReader.readUseLocalModel(),
+            localModelBaseUrl = ApiConfigReader.readLocalModelBaseUrl(),
+            localModelName = ApiConfigReader.readLocalModelName(),
         )
     }
 }
@@ -77,6 +82,17 @@ val networkModule = module {
             httpClient = get(),
             apiConfig = get(),
             json = get<Json>(),
+        )
+    }
+
+    // Local LLM service (Ollama)
+    single<LocalChatApiService> {
+        val apiConfig: ApiConfig = get()
+        LocalChatApiService(
+            httpClient = get(),
+            json = get(),
+            baseUrl = apiConfig.localModelBaseUrl,
+            modelName = apiConfig.localModelName,
         )
     }
 
@@ -169,6 +185,12 @@ val repositoryModule = module {
         )
     }
 
+    single {
+        OpenAiResponseMapper(
+            json = get()
+        )
+    }
+
     // Создание агентов
     single {
         SimpleChatAgent(
@@ -183,6 +205,8 @@ val repositoryModule = module {
             mcpToolsProvider = get<McpToolsProvider>(),
             mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
 
@@ -200,6 +224,8 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
 
@@ -217,6 +243,8 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
 
@@ -234,6 +262,8 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
 
@@ -251,6 +281,8 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
 
@@ -267,6 +299,8 @@ val repositoryModule = module {
             mcpToolsProvider = get<McpToolsProvider>(),
             mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
 

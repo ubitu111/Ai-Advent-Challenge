@@ -33,6 +33,9 @@ if (localPropertiesFile.exists()) {
 val apiKey: String = localProperties.getProperty("secret_key") ?: ""
 val keyId: String = localProperties.getProperty("key_id") ?: ""
 val mcpgateToken: String = localProperties.getProperty("mcpgate_token") ?: ""
+val localModelEnabled: String = localProperties.getProperty("local.model.enabled") ?: ""
+val localModelBaseUrl: String = localProperties.getProperty("local.model.base.url") ?: ""
+val localModelName: String = localProperties.getProperty("local.model.name") ?: ""
 
 // Task to generate API config file
 tasks.register("generateApiConfig") {
@@ -40,13 +43,13 @@ tasks.register("generateApiConfig") {
         // Generate for commonMain resources (for desktop)
         val apiConfigFile = file("src/commonMain/resources/api.properties")
         apiConfigFile.parentFile.mkdirs()
-        apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nmcpgate.token=$mcpgateToken")
+        apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nmcpgate.token=$mcpgateToken\nlocal.model.enabled=$localModelEnabled\nlocal.model.base.url=$localModelBaseUrl\nlocal.model.name=$localModelName")
         
         // Generate for Android assets
         val androidAssetsDir = rootProject.file("androidApp/src/main/assets")
         androidAssetsDir.mkdirs()
         val androidApiConfigFile = File(androidAssetsDir, "api.properties")
-        androidApiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nmcpgate.token=$mcpgateToken")
+        androidApiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nmcpgate.token=$mcpgateToken\nlocal.model.enabled=$localModelEnabled\nlocal.model.base.url=$localModelBaseUrl\nlocal.model.name=$localModelName")
     }
 }
 

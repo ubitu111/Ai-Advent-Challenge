@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import ru.mirtomsk.shared.chat.repository.cache.ChatCache
 import ru.mirtomsk.shared.chat.repository.mapper.AiResponseMapper
+import ru.mirtomsk.shared.chat.repository.mapper.OpenAiResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiMessage
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.chat.repository.model.AiResponse
@@ -19,6 +20,7 @@ import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
+import ru.mirtomsk.shared.network.LocalChatApiService
 import ru.mirtomsk.shared.network.agent.ModelTypeDto
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
@@ -46,6 +48,9 @@ abstract class BaseAiAgent(
     protected val mcpToolsProvider: McpToolsProvider,
     protected val mcpOrchestrator: McpOrchestrator,
     protected val json: Json,
+    // Новые параметры для локальной модели
+    private val localChatApiService: LocalChatApiService? = null,
+    private val openAiResponseMapper: OpenAiResponseMapper? = null,
 ) : AiAgent {
 
     protected val cacheMutex = Mutex()
@@ -103,8 +108,19 @@ abstract class BaseAiAgent(
                     messages = conversationCache,
                     tools = tools,
                 )
-                val responseBody = chatApiService.requestYandexGpt(request)
-                val response = yandexResponseMapper.mapResponseBody(responseBody, format)
+                
+                // Используем локальную модель, если она включена и доступна
+                val useLocalModel = apiConfig.useLocalModel && localChatApiService != null && openAiResponseMapper != null
+                val responseBody = if (useLocalModel) {
+                    localChatApiService!!.requestLocalLlm(request)
+                } else {
+                    chatApiService.requestYandexGpt(request)
+                }
+                val response = if (useLocalModel) {
+                    openAiResponseMapper!!.mapResponseBody(responseBody, format)
+                } else {
+                    yandexResponseMapper.mapResponseBody(responseBody, format)
+                }
 
                 // Обрабатываем tool calls если они есть
                 var currentResponse = response
@@ -206,9 +222,16 @@ abstract class BaseAiAgent(
                         tools = tools,
                     )
 
-                    val followUpResponseBody = chatApiService.requestYandexGpt(followUpRequest)
-                    currentResponse =
+                    val followUpResponseBody = if (useLocalModel) {
+                        localChatApiService!!.requestLocalLlm(followUpRequest)
+                    } else {
+                        chatApiService.requestYandexGpt(followUpRequest)
+                    }
+                    currentResponse = if (useLocalModel) {
+                        openAiResponseMapper!!.mapResponseBody(followUpResponseBody, format)
+                    } else {
                         yandexResponseMapper.mapResponseBody(followUpResponseBody, format)
+                    }
                 }
 
                 // Фиксируем время окончания запроса
