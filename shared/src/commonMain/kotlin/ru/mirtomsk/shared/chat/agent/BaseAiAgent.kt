@@ -20,7 +20,7 @@ import ru.mirtomsk.shared.chat.repository.model.MessageResponseDto
 import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
-import ru.mirtomsk.shared.network.LocalChatApiService
+import ru.mirtomsk.shared.network.ILocalChatApiService
 import ru.mirtomsk.shared.network.agent.ModelTypeDto
 import ru.mirtomsk.shared.network.format.ResponseFormat
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
@@ -49,7 +49,7 @@ abstract class BaseAiAgent(
     protected val mcpOrchestrator: McpOrchestrator,
     protected val json: Json,
     // Новые параметры для локальной модели
-    private val localChatApiService: LocalChatApiService? = null,
+    private val localChatApiService: ILocalChatApiService? = null,
     private val openAiResponseMapper: OpenAiResponseMapper? = null,
 ) : AiAgent {
 

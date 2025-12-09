@@ -22,19 +22,20 @@ import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 /**
  * API service for local LLM models (Ollama/LM Studio)
  * Uses OpenAI-compatible API format
+ * This is the HTTP-based implementation for desktop
  */
 class LocalChatApiService(
     private val httpClient: HttpClient,
     private val json: Json,
     private val baseUrl: String = "http://localhost:11434", // Ollama default
     private val modelName: String = "llama3.1:8b",
-) {
+) : ILocalChatApiService {
     
     /**
      * Request local LLM model with streaming response support
      * Note: Локальная модель не использует streaming, возвращает полный ответ
      */
-    fun requestLocalLlmStream(request: AiRequest): Flow<String> = flow {
+    override fun requestLocalLlmStream(request: AiRequest): Flow<String> = flow {
         // Локальная модель не поддерживает streaming, получаем полный ответ
         val fullResponse = requestLocalLlm(request)
         emit(fullResponse)
@@ -43,7 +44,7 @@ class LocalChatApiService(
     /**
      * Request local LLM model and return the full response (non-streaming)
      */
-    suspend fun requestLocalLlm(request: AiRequest): String {
+    override suspend fun requestLocalLlm(request: AiRequest): String {
         // Convert Yandex format to OpenAI format
         val openAiRequest = convertToOpenAiFormat(request)
         val requestBody = json.encodeToString(

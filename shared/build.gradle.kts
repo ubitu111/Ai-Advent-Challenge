@@ -110,6 +110,8 @@ kotlin {
                 
                 // DateTime
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+
+                implementation("com.llamatik:library:0.8.1")
             }
             resources.srcDirs("src/commonMain/resources")
         }

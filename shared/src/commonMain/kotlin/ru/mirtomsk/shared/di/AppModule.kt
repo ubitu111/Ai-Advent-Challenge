@@ -37,7 +37,9 @@ import ru.mirtomsk.shared.embeddings.createFilePicker
 import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepository
 import ru.mirtomsk.shared.embeddings.repository.EmbeddingsRepositoryImpl
 import ru.mirtomsk.shared.network.ChatApiService
+import ru.mirtomsk.shared.network.ILocalChatApiService
 import ru.mirtomsk.shared.network.LocalChatApiService
+import ru.mirtomsk.shared.network.createLocalChatApiService
 import ru.mirtomsk.shared.network.NetworkModule
 import ru.mirtomsk.shared.network.compression.ContextCompressionProvider
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
@@ -85,15 +87,29 @@ val networkModule = module {
         )
     }
 
-    // Local LLM service (Ollama)
-    single<LocalChatApiService> {
+    // Local LLM service (platform-specific: on-device for Android, HTTP for desktop)
+    // On Android: uses on-device llama.cpp model via JNI (if available)
+    // On Desktop: uses HTTP-based Ollama/LM Studio API
+    single<ILocalChatApiService> {
         val apiConfig: ApiConfig = get()
-        LocalChatApiService(
-            httpClient = get(),
-            json = get(),
-            baseUrl = apiConfig.localModelBaseUrl,
-            modelName = apiConfig.localModelName,
-        )
+        
+        if (apiConfig.useLocalModel) {
+            // Try to create platform-specific service
+            // Android will use on-device model, Desktop will use HTTP
+            createLocalChatApiService(
+                json = get(),
+                baseUrl = apiConfig.localModelBaseUrl,
+                modelName = apiConfig.localModelName,
+            )
+        } else {
+            // Use HTTP-based service (Ollama) - works for both platforms
+            LocalChatApiService(
+                httpClient = get(),
+                json = get(),
+                baseUrl = apiConfig.localModelBaseUrl,
+                modelName = apiConfig.localModelName,
+            )
+        }
     }
 
     // Create MCP orchestrator with list of services
@@ -205,7 +221,7 @@ val repositoryModule = module {
             mcpToolsProvider = get<McpToolsProvider>(),
             mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
-            localChatApiService = get<LocalChatApiService>(),
+            localChatApiService = get<ILocalChatApiService>(),
             openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
@@ -224,7 +240,7 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
-            localChatApiService = get<LocalChatApiService>(),
+            localChatApiService = get<ILocalChatApiService>(),
             openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
@@ -243,7 +259,7 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
-            localChatApiService = get<LocalChatApiService>(),
+            localChatApiService = get<ILocalChatApiService>(),
             openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
@@ -262,7 +278,7 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
-            localChatApiService = get<LocalChatApiService>(),
+            localChatApiService = get<ILocalChatApiService>(),
             openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
@@ -281,7 +297,7 @@ val repositoryModule = module {
             mcpOrchestrator = get<McpOrchestrator>(),
             ragService = get<RagService>(),
             json = get<Json>(),
-            localChatApiService = get<LocalChatApiService>(),
+            localChatApiService = get<ILocalChatApiService>(),
             openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }
@@ -299,7 +315,7 @@ val repositoryModule = module {
             mcpToolsProvider = get<McpToolsProvider>(),
             mcpOrchestrator = get<McpOrchestrator>(),
             json = get<Json>(),
-            localChatApiService = get<LocalChatApiService>(),
+            localChatApiService = get<ILocalChatApiService>(),
             openAiResponseMapper = get<OpenAiResponseMapper>(),
         )
     }

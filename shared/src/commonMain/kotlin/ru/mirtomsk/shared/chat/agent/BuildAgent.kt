@@ -8,7 +8,7 @@ import ru.mirtomsk.shared.chat.repository.mapper.OpenAiResponseMapper
 import ru.mirtomsk.shared.chat.repository.model.AiRequest
 import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.network.ChatApiService
-import ru.mirtomsk.shared.network.LocalChatApiService
+import ru.mirtomsk.shared.network.ILocalChatApiService
 import ru.mirtomsk.shared.network.format.ResponseFormatProvider
 import ru.mirtomsk.shared.network.mcp.McpOrchestrator
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
@@ -32,7 +32,7 @@ class BuildAgent(
     mcpToolsProvider: McpToolsProvider,
     mcpOrchestrator: McpOrchestrator,
     json: Json,
-    localChatApiService: LocalChatApiService,
+    localChatApiService: ILocalChatApiService,
     openAiResponseMapper: OpenAiResponseMapper,
 ) : BaseAiAgent(
     name = "BuildAgent",
