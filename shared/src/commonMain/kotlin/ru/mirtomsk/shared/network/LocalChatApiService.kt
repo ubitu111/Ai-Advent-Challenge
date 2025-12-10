@@ -26,8 +26,8 @@ import ru.mirtomsk.shared.chat.repository.model.MessageRoleDto
 class LocalChatApiService(
     private val httpClient: HttpClient,
     private val json: Json,
-    private val baseUrl: String = "http://localhost:11434", // Ollama default
-    private val modelName: String = "llama3.1:8b",
+    private val baseUrl: String,
+    private val modelName: String,
 ) {
     
     /**

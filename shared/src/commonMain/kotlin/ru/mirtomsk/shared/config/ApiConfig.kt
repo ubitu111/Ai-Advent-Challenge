@@ -21,7 +21,7 @@ class ApiConfigImpl(
     override val keyId: String,
     override val mcpgateToken: String,
     override val useLocalModel: Boolean = false,
-    override val localModelBaseUrl: String = "http://localhost:11434",
-    override val localModelName: String = "llama3.1:8b",
+    override val localModelBaseUrl: String,
+    override val localModelName: String,
 ) : ApiConfig
 
