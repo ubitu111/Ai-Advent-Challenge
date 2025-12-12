@@ -44,11 +44,11 @@ object NetworkModule {
 
                 // Таймаут на получение ответа (socket timeout / read timeout)
                 // Время ожидания данных от сервера после установки соединения
-                socketTimeoutMillis = 30.seconds.inWholeMilliseconds
+                socketTimeoutMillis = 80.seconds.inWholeMilliseconds
 
                 // Общий таймаут на запрос (request timeout)
                 // Максимальное время выполнения всего запроса (включая подключение и чтение)
-                requestTimeoutMillis = 60.seconds.inWholeMilliseconds
+                requestTimeoutMillis = 120.seconds.inWholeMilliseconds
             }
 
             // Logging (optional)

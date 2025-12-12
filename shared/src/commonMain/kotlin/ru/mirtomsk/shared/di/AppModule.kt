@@ -133,6 +133,7 @@ val repositoryModule = module {
         Json {
             ignoreUnknownKeys = true
             encodeDefaults = true
+            prettyPrint = true
         }
     }
 
