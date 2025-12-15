@@ -41,5 +41,6 @@ data class ChatUiState(
     val isSettingsOpen: Boolean = false,
     val isDollarRateOpen: Boolean = false,
     val isEmbeddingsOpen: Boolean = false,
+    val pendingAnalysisFile: Boolean = false, // Флаг ожидания выбора файла для анализа
 )
 

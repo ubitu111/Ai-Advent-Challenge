@@ -9,6 +9,7 @@ import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.agent.BuildAgent
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
+import ru.mirtomsk.shared.chat.agent.DatabaseAnalystAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperHelperAgent
 import ru.mirtomsk.shared.chat.agent.SimpleChatAgent
@@ -180,6 +181,13 @@ val repositoryModule = module {
         )
     }
 
+    single<ChatCache>(named("databaseAnalystCache")) {
+        FileChatCache(
+            cacheFileName = "database_analyst_cache.json",
+            json = get()
+        )
+    }
+
     single {
         AiResponseMapper(
             json = get()
@@ -305,6 +313,24 @@ val repositoryModule = module {
         )
     }
 
+    single {
+        DatabaseAnalystAgent(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            chatCache = get(named("databaseAnalystCache")),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
+            json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
+        )
+    }
+
     // Репозиторий как оркестратор агентов
     single {
         ChatRepositoryImpl(
@@ -316,6 +342,7 @@ val repositoryModule = module {
             supportAgent = get<SupportAgent>(),
             developerAgent = get<DeveloperAgent>(),
             buildAgent = get<BuildAgent>(),
+            databaseAnalystAgent = get<DatabaseAnalystAgent>(),
         )
     }.bind<ChatRepository>()
 
@@ -405,6 +432,7 @@ val viewModelModule = module {
             repository = get<ChatRepository>(),
             mcpRepository = get<McpRepository>(),
             mcpToolsProvider = get<McpToolsProvider>(),
+            filePicker = get<FilePicker>(),
             dollarRateScheduler = get<DollarRateScheduler>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
