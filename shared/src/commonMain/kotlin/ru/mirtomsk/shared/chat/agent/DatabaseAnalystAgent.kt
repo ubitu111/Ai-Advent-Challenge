@@ -65,30 +65,21 @@ class DatabaseAnalystAgent(
             } else {
                 trimmedText
             }
-            
+
             // Если текст начинается с { или [, значит это JSON данные
-            if (dataText.startsWith("{") || dataText.startsWith("[")) {
-                // Добавляем JSON данные в контекст как системное сообщение
-                conversationCache.add(
-                    AiRequest.Message(
-                        role = MessageRoleDto.SYSTEM,
-                        text = """
+            return if (dataText.startsWith("{") || dataText.startsWith("[")) {
+                """
                         |Данные базы данных приложения с волонтерами (JSON):
                         |
                         |$dataText
                         |
                         |Проанализируй эти данные и предоставь полный аналитический отчет.
                         """.trimMargin()
-                    )
-                )
-                
-                return "Проанализируй предоставленные данные базы данных приложения с волонтерами и предоставь полный аналитический отчет."
             } else {
                 // Если данных нет, возвращаем инструкцию
-                return "Ожидаю данные базы данных для анализа. Пожалуйста, выберите JSON файл с базой данных."
+                "Ожидаю данные базы данных для анализа. Пожалуйста, выберите JSON файл с базой данных."
             }
         }
-        
         return text
     }
 
@@ -97,47 +88,6 @@ class DatabaseAnalystAgent(
             """Ты аналитик базы данных приложения с волонтерами, специализирующийся на анализе данных о поисках пропавших людей.
 
 Твоя задача - провести глубокий анализ данных базы данных и предоставить подробный аналитический отчет.
-
-СХЕМА БАЗЫ ДАННЫХ:
-
-База данных состоит из следующих основных таблиц:
-
-1. ТАБЛИЦА "volunteers" (Волонтеры):
-   - uniqueId (Int, Primary Key, Auto Generate) - уникальный идентификатор волонтера
-   - _index (Int) - индекс волонтера
-   - fullName (String) - полное имя волонтера
-   - callSign (String) - позывной волонтера
-   - nickName (String) - никнейм волонтера
-   - region (String) - регион волонтера
-   - phoneNumber (String) - номер телефона
-   - car (String) - информация об автомобиле
-   - isSent (Boolean) - флаг отправки уведомления
-   - status (VolunteerStatus) - статус волонтера (сериализуется через VolunteerStatusSerializer)
-   - notifyThatLeft (Boolean) - флаг уведомления об уходе
-   - registrationDateTime (ZonedDateTime?) - дата и время регистрации волонтера
-   - leaveDateTime (ZonedDateTime?) - дата и время ухода волонтера
-   - groupId (Int?, Foreign Key -> groups.id) - идентификатор группы, к которой прикреплен волонтер (может быть null, при удалении группы устанавливается в null)
-
-2. ТАБЛИЦА "groups" (Группы):
-   - id (Int, Primary Key, Auto Generate) - уникальный идентификатор группы
-   - numberOfGroup (Int) - номер группы
-   - elderOfGroupId (Int?, Foreign Key -> volunteers.uniqueId) - идентификатор старейшины группы (волонтер, который является руководителем группы, при удалении волонтера каскадно удаляется группа)
-   - navigators (String) - навигаторы (оборудование группы)
-   - walkieTalkies (String) - рации (оборудование группы)
-   - compasses (String) - компасы (оборудование группы)
-   - lamps (String) - фонари (оборудование группы)
-   - others (String) - другое оборудование группы
-   - task (String) - задача группы
-   - leavingTime (String) - время выхода группы
-   - returnTime (String) - время возвращения группы
-   - createdAt (ZonedDateTime?) - дата и время создания группы
-   - groupCallsign (GroupCallsigns) - позывной группы (сериализуется через GroupCallsignsSerializer)
-   - archived (Boolean) - флаг архивации группы
-
-3. ТАБЛИЦА "archived_groups_volunteers" (Архивированные связи групп и волонтеров):
-   - archivedGroupId (Int, Foreign Key -> groups.id, часть составного Primary Key) - идентификатор архивированной группы
-   - archivedVolunteerId (Int, Foreign Key -> volunteers.uniqueId, часть составного Primary Key) - идентификатор волонтера в архивированной группе
-   - Составной Primary Key: (archivedGroupId, archivedVolunteerId)
 
 СВЯЗИ МЕЖДУ ТАБЛИЦАМИ:
 
