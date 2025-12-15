@@ -13,10 +13,12 @@ import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.chat.agent.ChatCommand
 import ru.mirtomsk.shared.chat.repository.ChatRepository
+import ru.mirtomsk.shared.config.ApiConfig
 import ru.mirtomsk.shared.dollarRate.DollarRateScheduler
 import ru.mirtomsk.shared.embeddings.FilePicker
 import ru.mirtomsk.shared.network.mcp.McpRepository
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
+import ru.mirtomsk.shared.network.rag.OllamaApiService
 import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
 
 class ChatViewModel(
@@ -24,6 +26,8 @@ class ChatViewModel(
     private val mcpRepository: McpRepository,
     private val mcpToolsProvider: McpToolsProvider,
     private val filePicker: FilePicker,
+    private val ollamaApiService: OllamaApiService?,
+    private val apiConfig: ApiConfig,
     dollarRateScheduler: DollarRateScheduler,
     mainDispatcher: CoroutineDispatcher,
 ) {
@@ -64,6 +68,14 @@ class ChatViewModel(
         // Если команда /analysis, открываем FilePicker
         if (command == ChatCommand.ANALYSIS) {
             selectFileForAnalysis()
+            return
+        }
+
+        // Если команда /context, проверяем контекстное окно
+        if (command == ChatCommand.CONTEXT) {
+            checkModelContextWindow()
+            // Очищаем input, но не добавляем сообщение пользователя
+            uiState = uiState.copy(inputText = "")
             return
         }
 
@@ -292,6 +304,105 @@ class ChatViewModel(
 
     fun closeEmbeddings() {
         uiState = uiState.copy(isEmbeddingsOpen = false)
+    }
+
+    /**
+     * Проверяет размер контекстного окна модели Ollama
+     * Отправляет результат в чат
+     */
+    fun checkModelContextWindow() {
+        viewmodelScope.launch {
+            try {
+                if (!apiConfig.useLocalModel || ollamaApiService == null) {
+                    val errorMessage = Message(
+                        content = MessageContent.Text(
+                            "Локальная модель не настроена. Проверьте настройки приложения."
+                        ),
+                        role = MessageRole.ASSISTANT
+                    )
+                    uiState = uiState.copy(
+                        messages = uiState.messages + errorMessage
+                    )
+                    return@launch
+                }
+
+                val modelName = apiConfig.localModelName
+                if (modelName.isBlank()) {
+                    val errorMessage = Message(
+                        content = MessageContent.Text(
+                            "Имя модели не указано в настройках."
+                        ),
+                        role = MessageRole.ASSISTANT
+                    )
+                    uiState = uiState.copy(
+                        messages = uiState.messages + errorMessage
+                    )
+                    return@launch
+                }
+
+                val modelInfo = ollamaApiService.getModelInfo(modelName)
+
+                val responseText = if (modelInfo != null && modelInfo.contextSize != null) {
+                    val contextSize = modelInfo.contextSize
+                    val parameterSize = modelInfo.parameterSize ?: "не указан"
+                    val quantization = modelInfo.quantizationLevel ?: "не указан"
+                    
+                    """
+                    **Информация о модели: $modelName**
+                    
+                    📊 **Размер контекстного окна:** $contextSize токенов
+                    🔢 **Параметры:** $parameterSize
+                    ⚙️ **Квантование:** $quantization
+                    
+                    ${if (contextSize < 4000) "⚠️ **Внимание:** Размер контекстного окна меньше 4000 токенов. Это может ограничивать возможности модели при работе с длинными текстами." else ""}
+                    """.trimIndent()
+                } else {
+                    """
+                    **Информация о модели: $modelName**
+                    
+                    ❌ Не удалось получить информацию о размере контекстного окна.
+                    
+                    **Способы проверки на VPS:**
+                    
+                    1. **Через команду Ollama CLI:**
+                       ```bash
+                       ollama show $modelName
+                       ```
+                       Ищите поле `context_size` в выводе.
+                    
+                    2. **Через API запрос:**
+                       ```bash
+                       curl http://localhost:11434/api/show?name=$modelName
+                       ```
+                       Ищите `context_size` в поле `details`.
+                    
+                    3. **Проверка через переменную окружения:**
+                       Если установлена переменная `OLLAMA_CONTEXT_LENGTH`, она может ограничивать контекстное окно.
+                    """.trimIndent()
+                }
+
+                val assistantMessage = Message(
+                    content = MessageContent.Text(responseText),
+                    role = MessageRole.ASSISTANT
+                )
+                uiState = uiState.copy(
+                    messages = uiState.messages + assistantMessage
+                )
+            } catch (e: Exception) {
+                val errorMessage = Message(
+                    content = MessageContent.Text(
+                        "Ошибка при проверке контекстного окна: ${e.message ?: "Неизвестная ошибка"}\n\n" +
+                        "**Способы проверки на VPS:**\n\n" +
+                        "1. Через команду: `ollama show ${apiConfig.localModelName}`\n" +
+                        "2. Через API: `curl http://localhost:11434/api/show?name=${apiConfig.localModelName}`"
+                    ),
+                    role = MessageRole.ASSISTANT
+                )
+                uiState = uiState.copy(
+                    messages = uiState.messages + errorMessage
+                )
+            }
+        }
     }
 }
 

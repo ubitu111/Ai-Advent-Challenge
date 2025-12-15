@@ -119,9 +119,17 @@ val networkModule = module {
     }
 
     single {
+        val apiConfig: ApiConfig = get()
+        // Используем baseUrl из конфигурации, если локальная модель включена, иначе дефолтный
+        val ollamaBaseUrl = if (apiConfig.useLocalModel && apiConfig.localModelBaseUrl.isNotBlank()) {
+            apiConfig.localModelBaseUrl
+        } else {
+            "http://127.0.0.1:11434"
+        }
         OllamaApiService(
             httpClient = get(),
-            baseUrl = "http://127.0.0.1:11434",
+            baseUrl = ollamaBaseUrl,
+            json = get(),
         )
     }
 }
@@ -433,6 +441,8 @@ val viewModelModule = module {
             mcpRepository = get<McpRepository>(),
             mcpToolsProvider = get<McpToolsProvider>(),
             filePicker = get<FilePicker>(),
+            ollamaApiService = get<OllamaApiService>(),
+            apiConfig = get<ApiConfig>(),
             dollarRateScheduler = get<DollarRateScheduler>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )

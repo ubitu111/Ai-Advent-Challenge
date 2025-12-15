@@ -52,6 +52,7 @@ class ChatRepositoryImpl(
                 ChatCommand.DEVELOP -> developerAgent
                 ChatCommand.BUILD -> buildAgent
                 ChatCommand.ANALYSIS -> databaseAnalystAgent
+                ChatCommand.CONTEXT -> throw IllegalArgumentException("there is no agent for command $command")
                 ChatCommand.NONE -> simpleChatAgent
             }
 
