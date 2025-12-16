@@ -9,6 +9,7 @@ import org.koin.dsl.module
 import ru.mirtomsk.shared.chat.ChatViewModel
 import ru.mirtomsk.shared.chat.agent.BuildAgent
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
+import ru.mirtomsk.shared.chat.agent.DatabaseAnalystAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperAgent
 import ru.mirtomsk.shared.chat.agent.DeveloperHelperAgent
 import ru.mirtomsk.shared.chat.agent.SimpleChatAgent
@@ -118,9 +119,17 @@ val networkModule = module {
     }
 
     single {
+        val apiConfig: ApiConfig = get()
+        // Используем baseUrl из конфигурации, если локальная модель включена, иначе дефолтный
+        val ollamaBaseUrl = if (apiConfig.useLocalModel && apiConfig.localModelBaseUrl.isNotBlank()) {
+            apiConfig.localModelBaseUrl
+        } else {
+            "http://127.0.0.1:11434"
+        }
         OllamaApiService(
             httpClient = get(),
-            baseUrl = "http://127.0.0.1:11434",
+            baseUrl = ollamaBaseUrl,
+            json = get(),
         )
     }
 }
@@ -176,6 +185,13 @@ val repositoryModule = module {
     single<ChatCache>(named("buildCache")) {
         FileChatCache(
             cacheFileName = "build_cache.json",
+            json = get()
+        )
+    }
+
+    single<ChatCache>(named("databaseAnalystCache")) {
+        FileChatCache(
+            cacheFileName = "database_analyst_cache.json",
             json = get()
         )
     }
@@ -305,6 +321,24 @@ val repositoryModule = module {
         )
     }
 
+    single {
+        DatabaseAnalystAgent(
+            chatApiService = get(),
+            apiConfig = get(),
+            ioDispatcher = get<DispatchersProvider>().io,
+            yandexResponseMapper = get<AiResponseMapper>(),
+            formatProvider = get<ResponseFormatProvider>(),
+            temperatureProvider = get<TemperatureProvider>(),
+            maxTokensProvider = get<MaxTokensProvider>(),
+            chatCache = get(named("databaseAnalystCache")),
+            mcpToolsProvider = get<McpToolsProvider>(),
+            mcpOrchestrator = get<McpOrchestrator>(),
+            json = get<Json>(),
+            localChatApiService = get<LocalChatApiService>(),
+            openAiResponseMapper = get<OpenAiResponseMapper>(),
+        )
+    }
+
     // Репозиторий как оркестратор агентов
     single {
         ChatRepositoryImpl(
@@ -316,6 +350,7 @@ val repositoryModule = module {
             supportAgent = get<SupportAgent>(),
             developerAgent = get<DeveloperAgent>(),
             buildAgent = get<BuildAgent>(),
+            databaseAnalystAgent = get<DatabaseAnalystAgent>(),
         )
     }.bind<ChatRepository>()
 
@@ -405,6 +440,9 @@ val viewModelModule = module {
             repository = get<ChatRepository>(),
             mcpRepository = get<McpRepository>(),
             mcpToolsProvider = get<McpToolsProvider>(),
+            filePicker = get<FilePicker>(),
+            ollamaApiService = get<OllamaApiService>(),
+            apiConfig = get<ApiConfig>(),
             dollarRateScheduler = get<DollarRateScheduler>(),
             mainDispatcher = get<DispatchersProvider>().main,
         )
