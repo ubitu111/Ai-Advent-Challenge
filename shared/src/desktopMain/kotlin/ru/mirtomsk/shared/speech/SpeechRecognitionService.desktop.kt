@@ -23,6 +23,10 @@ import java.io.File
  * 
  * Note: Ollama does not natively support Whisper models.
  * Use a separate Whisper server (OWhisper, Speaches) that provides OpenAI-compatible API.
+ * 
+ * Future enhancement: For macOS, consider adding Kotlin/Native target to use
+ * macOS Speech Framework (SFSpeechRecognizer) for native offline speech recognition.
+ * See MACOS_SPEECH_FRAMEWORK_SETUP.md for implementation details.
  */
 class DesktopSpeechRecognitionService(
     private val httpClient: HttpClient,
@@ -107,7 +111,11 @@ actual fun createSpeechRecognitionService(): SpeechRecognitionService {
     // Note: This is separate from Ollama URL
     // To configure, add whisper.base.url to local.properties
     // For setup instructions, see WHISPER_SETUP.md
-    val whisperBaseUrl = "http://127.0.0.1:8000"  // Default Whisper server URL
+    // 
+    // If server uses different port (8001, 8002, etc.), update this URL
+    // You can also check which port is used by running: lsof -i :8000
+    val whisperBaseUrl = System.getenv("WHISPER_BASE_URL") 
+        ?: "http://127.0.0.1:8000"  // Default Whisper server URL
     
     return DesktopSpeechRecognitionService(
         httpClient = httpClient,

@@ -14,34 +14,152 @@
 
 OWhisper - это локальный сервер для Whisper с поддержкой OpenAI-совместимого API.
 
+**⚠️ Важно:** OWhisper доступен только через Docker, не через pip/pipx.
+
 **Установка через Docker:**
 ```bash
+# Скачать образ
+docker pull hyprnote/owhisper:latest
+
+# Или альтернативный образ
+docker pull ghcr.io/0x00001f/owhisper:latest
+
+# Запустить сервер
 docker run -d \
   --name owhisper \
   -p 8000:8000 \
   -v $(pwd)/models:/app/models \
-  ghcr.io/0x00001f/owhisper:latest
-```
-
-**Или через pip:**
-```bash
-pip install owhisper
-owhisper serve --host 0.0.0.0 --port 8000
+  hyprnote/owhisper:latest
 ```
 
 **Проверка работы:**
 ```bash
+# Проверить статус контейнера
+docker ps | grep owhisper
+
+# Проверить health endpoint (если доступен)
 curl http://localhost:8000/health
+
+# Или проверить основной endpoint
+curl http://localhost:8000/v1/models
 ```
 
-### 1.2. Использование Speaches
+### 1.2. Альтернатива: Простой Python Whisper сервер (Рекомендуется для быстрого старта)
 
-Speaches - еще один OpenAI-совместимый сервер для транскрипции.
+Если Docker недоступен, можно использовать простой Python сервер с OpenAI-совместимым API.
+
+**Установка:**
+
+⚠️ **Важно:** Используйте `pip` или `pip3`, а не `brew` для установки Python пакетов!
+
+```bash
+# Проверьте, какой Python используется
+which python3
+python3 --version
+
+# Установить зависимости через pip
+pip3 install fastapi uvicorn openai-whisper python-multipart
+
+# Или использовать faster-whisper (быстрее, рекомендуется)
+pip3 install fastapi uvicorn faster-whisper python-multipart
+
+# Если pip3 не найден, попробуйте:
+python3 -m pip install fastapi uvicorn openai-whisper python-multipart
+```
+
+**Рекомендуется использовать виртуальное окружение:**
+
+```bash
+# Создать виртуальное окружение
+python3 -m venv whisper_env
+
+# Активировать (macOS/Linux)
+source whisper_env/bin/activate
+
+# Установить зависимости
+pip install fastapi uvicorn openai-whisper python-multipart
+
+# Запустить сервер
+python whisper_server.py
+
+# Деактивировать окружение (когда закончите)
+deactivate
+```
+
+**Создать файл `whisper_server.py`:**
+```python
+from fastapi import FastAPI, File, UploadFile, Form
+from fastapi.responses import JSONResponse
+import whisper
+import tempfile
+import os
+
+app = FastAPI()
+
+# Загрузить модель при старте (используйте "base" для быстрого старта)
+model = whisper.load_model("base")
+
+@app.post("/v1/audio/transcriptions")
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    model: str = Form("whisper-1"),
+    language: str = Form(None)
+):
+    try:
+        # Сохранить временный файл
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_path = tmp_file.name
+        
+        # Транскрибировать
+        result = model.transcribe(tmp_path, language=language)
+        
+        # Удалить временный файл
+        os.unlink(tmp_path)
+        
+        return JSONResponse(content={"text": result["text"]})
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+**Запуск:**
+```bash
+python whisper_server.py
+```
+
+**Или с faster-whisper (быстрее):**
+```python
+from faster_whisper import WhisperModel
+
+# Вместо whisper.load_model используйте:
+model = WhisperModel("base", device="cpu", compute_type="int8")
+# Для транскрипции:
+segments, info = model.transcribe(tmp_path, language=language)
+text = " ".join([segment.text for segment in segments])
+```
+
+### 1.3. Альтернатива: Tiny OpenAI Whisper API
+
+Простой сервер, эмулирующий OpenAI Whisper API.
 
 **Установка:**
 ```bash
-pip install speaches
-speaches serve --host 0.0.0.0 --port 8000
+git clone https://github.com/morioka/tiny-openai-whisper-api.git
+cd tiny-openai-whisper-api
+pip install -r requirements.txt
+python app.py
 ```
 
 ### 1.3. Обновление кода приложения
