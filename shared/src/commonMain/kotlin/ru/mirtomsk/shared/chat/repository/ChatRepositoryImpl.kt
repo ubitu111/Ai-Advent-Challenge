@@ -3,6 +3,7 @@ package ru.mirtomsk.shared.chat.repository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import ru.mirtomsk.shared.chat.agent.AssistantAgent
 import ru.mirtomsk.shared.chat.agent.BuildAgent
 import ru.mirtomsk.shared.chat.agent.ChatCommand
 import ru.mirtomsk.shared.chat.agent.CodeReviewAgent
@@ -28,6 +29,7 @@ class ChatRepositoryImpl(
     private val developerAgent: DeveloperAgent,
     private val buildAgent: BuildAgent,
     private val databaseAnalystAgent: DatabaseAnalystAgent,
+    private val assistantAgent: AssistantAgent,
 ) : ChatRepository {
 
     private var lastResetCounter: Long = 0L
@@ -52,6 +54,7 @@ class ChatRepositoryImpl(
                 ChatCommand.DEVELOP -> developerAgent
                 ChatCommand.BUILD -> buildAgent
                 ChatCommand.ANALYSIS -> databaseAnalystAgent
+                ChatCommand.ASSISTANT -> assistantAgent
                 ChatCommand.CONTEXT -> throw IllegalArgumentException("there is no agent for command $command")
                 ChatCommand.NONE -> simpleChatAgent
             }
@@ -72,5 +75,6 @@ class ChatRepositoryImpl(
         developerAgent.clearCache()
         buildAgent.clearCache()
         databaseAnalystAgent.clearCache()
+        assistantAgent.clearCache()
     }
 }

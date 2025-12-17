@@ -1,6 +1,7 @@
 package ru.mirtomsk.shared.config
 
 import java.util.Properties
+import java.nio.charset.StandardCharsets
 
 /**
  * Reads API configuration from properties file
@@ -37,15 +38,23 @@ object ApiConfigReader {
         val properties = Properties()
         val resourceStream = getResourceInputStream("api.properties")
 
-        resourceStream.use { properties.load(it) }
-        return properties.getProperty(key)
+        resourceStream?.use { inputStream ->
+            java.io.InputStreamReader(inputStream, StandardCharsets.UTF_8).use { reader ->
+                properties.load(reader)
+            }
+        }
+        return properties.getProperty(key) ?: ""
     }
 
     private fun readProperty(key: String, defaultValue: String): String {
         val properties = Properties()
         val resourceStream = getResourceInputStream("api.properties")
 
-        resourceStream?.use { properties.load(it) }
+        resourceStream?.use { inputStream ->
+            java.io.InputStreamReader(inputStream, StandardCharsets.UTF_8).use { reader ->
+                properties.load(reader)
+            }
+        }
         return properties.getProperty(key, defaultValue)
     }
 }

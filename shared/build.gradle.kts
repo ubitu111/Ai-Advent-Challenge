@@ -1,5 +1,7 @@
 import java.util.Properties
 import java.io.File
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -27,7 +29,11 @@ android {
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { localProperties.load(it) }
+    localPropertiesFile.inputStream().use { inputStream ->
+        InputStreamReader(inputStream, StandardCharsets.UTF_8).use { reader ->
+            localProperties.load(reader)
+        }
+    }
 }
 
 val apiKey: String = localProperties.getProperty("secret_key") ?: ""
@@ -40,16 +46,26 @@ val localModelName: String = localProperties.getProperty("local.model.name") ?: 
 // Task to generate API config file
 tasks.register("generateApiConfig") {
     doFirst {
+        // Build properties content
+        val propertiesContent = buildString {
+            appendLine("api.key=$apiKey")
+            appendLine("api.key.id=$keyId")
+            appendLine("mcpgate.token=$mcpgateToken")
+            appendLine("local.model.enabled=$localModelEnabled")
+            appendLine("local.model.base.url=$localModelBaseUrl")
+            appendLine("local.model.name=$localModelName")
+        }
+        
         // Generate for commonMain resources (for desktop)
         val apiConfigFile = file("src/commonMain/resources/api.properties")
         apiConfigFile.parentFile.mkdirs()
-        apiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nmcpgate.token=$mcpgateToken\nlocal.model.enabled=$localModelEnabled\nlocal.model.base.url=$localModelBaseUrl\nlocal.model.name=$localModelName")
+        apiConfigFile.writeText(propertiesContent, StandardCharsets.UTF_8)
         
         // Generate for Android assets
         val androidAssetsDir = rootProject.file("androidApp/src/main/assets")
         androidAssetsDir.mkdirs()
         val androidApiConfigFile = File(androidAssetsDir, "api.properties")
-        androidApiConfigFile.writeText("api.key=$apiKey\napi.key.id=$keyId\nmcpgate.token=$mcpgateToken\nlocal.model.enabled=$localModelEnabled\nlocal.model.base.url=$localModelBaseUrl\nlocal.model.name=$localModelName")
+        androidApiConfigFile.writeText(propertiesContent, StandardCharsets.UTF_8)
     }
 }
 
