@@ -35,7 +35,7 @@ class SimpleChatAgent(
     openAiResponseMapper: OpenAiResponseMapper,
 ) : BaseAiAgent(
     name = "SimpleChatAgent",
-    systemPrompt = "",
+    systemPrompt = SIMPLE_CHAT_PROMPT,
     chatApiService = chatApiService,
     apiConfig = apiConfig,
     ioDispatcher = ioDispatcher,
