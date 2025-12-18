@@ -43,11 +43,13 @@ import ru.mirtomsk.shared.chat.model.Message.MessageRole
 import ru.mirtomsk.shared.chat.model.MessageContent
 import ru.mirtomsk.shared.clipboard.createClipboardHelper
 import ru.mirtomsk.shared.di.koinInject
-import ru.mirtomsk.shared.settings.SettingsScreen
 import ru.mirtomsk.shared.dollarRate.DollarRateScreen
 import ru.mirtomsk.shared.dollarRate.DollarRateViewModel
 import ru.mirtomsk.shared.embeddings.EmbeddingsScreen
 import ru.mirtomsk.shared.embeddings.EmbeddingsViewModel
+import ru.mirtomsk.shared.settings.SettingsScreen
+import ru.mirtomsk.shared.speech.createAudioRecorder
+import ru.mirtomsk.shared.speech.createSpeechRecognitionService
 
 @Composable
 fun ChatScreen(
@@ -58,6 +60,17 @@ fun ChatScreen(
     val uiState = viewModel.uiState
     val dollarRateUiState = dollarRateViewModel.uiState
     val listState = rememberLazyListState()
+    
+    // Initialize audio recorder and speech recognition service
+    // Note: These are @Composable functions, so they must be called directly
+    // They will be recreated on each recomposition, but LaunchedEffect will handle the lifecycle
+    val audioRecorder = createAudioRecorder()
+    val speechRecognitionService = createSpeechRecognitionService()
+    
+    LaunchedEffect(Unit) {
+        viewModel.setAudioRecorder(audioRecorder)
+        viewModel.setSpeechRecognitionService(speechRecognitionService)
+    }
 
     // Scroll to bottom when new message is added or loading state changes
     LaunchedEffect(uiState.messages.size, uiState.isLoading) {
@@ -169,11 +182,39 @@ fun ChatScreen(
                             }
                         },
                     placeholder = { Text("Type a message...") },
-                    singleLine = true
+                    singleLine = true,
+                    enabled = !uiState.isRecording && !uiState.isTranscribing
                 )
+                
+                // Voice recording button
+                if (uiState.isRecording) {
+                    Button(
+                        onClick = { viewModel.stopVoiceRecording() },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Text("⏹", style = MaterialTheme.typography.h6)
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.startVoiceRecording() },
+                        enabled = !uiState.isTranscribing,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        if (uiState.isTranscribing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colors.onPrimary
+                            )
+                        } else {
+                            Text("🎤", style = MaterialTheme.typography.h6)
+                        }
+                    }
+                }
+                
                 Button(
                     onClick = viewModel::sendMessage,
-                    enabled = uiState.inputText.isNotBlank()
+                    enabled = uiState.inputText.isNotBlank() && !uiState.isRecording && !uiState.isTranscribing
                 ) {
                     Text("Send")
                 }

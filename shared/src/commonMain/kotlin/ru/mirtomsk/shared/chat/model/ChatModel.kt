@@ -42,5 +42,8 @@ data class ChatUiState(
     val isDollarRateOpen: Boolean = false,
     val isEmbeddingsOpen: Boolean = false,
     val pendingAnalysisFile: Boolean = false, // Флаг ожидания выбора файла для анализа
+    val isRecording: Boolean = false, // Флаг записи голоса
+    val recordingDuration: Long = 0L, // Длительность записи в миллисекундах
+    val isTranscribing: Boolean = false, // Флаг распознавания речи
 )
 

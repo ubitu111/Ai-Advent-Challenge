@@ -20,6 +20,10 @@ import ru.mirtomsk.shared.network.mcp.McpRepository
 import ru.mirtomsk.shared.network.mcp.McpToolsProvider
 import ru.mirtomsk.shared.network.rag.OllamaApiService
 import ru.mirtomsk.shared.chat.repository.model.AiMessage.MessageContent as AiMessageContent
+import ru.mirtomsk.shared.speech.AudioRecorder
+import ru.mirtomsk.shared.speech.SpeechRecognitionService
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 class ChatViewModel(
     private val repository: ChatRepository,
@@ -31,6 +35,9 @@ class ChatViewModel(
     dollarRateScheduler: DollarRateScheduler,
     mainDispatcher: CoroutineDispatcher,
 ) {
+    
+    private var audioRecorder: AudioRecorder? = null
+    private var speechRecognitionService: SpeechRecognitionService? = null
 
     private val viewmodelScope = CoroutineScope(mainDispatcher + SupervisorJob())
     var uiState by mutableStateOf(ChatUiState())
@@ -304,6 +311,123 @@ class ChatViewModel(
 
     fun closeEmbeddings() {
         uiState = uiState.copy(isEmbeddingsOpen = false)
+    }
+    
+    /**
+     * Set audio recorder instance (should be called from Composable)
+     */
+    fun setAudioRecorder(recorder: AudioRecorder) {
+        audioRecorder = recorder
+        // Observe recording state
+        recorder.isRecording.onEach { isRecording ->
+            uiState = uiState.copy(isRecording = isRecording)
+        }.launchIn(viewmodelScope)
+        
+        // Observe recording duration
+        recorder.recordingDuration.onEach { duration ->
+            uiState = uiState.copy(recordingDuration = duration)
+        }.launchIn(viewmodelScope)
+    }
+    
+    /**
+     * Set speech recognition service instance (should be called from Composable)
+     */
+    fun setSpeechRecognitionService(service: SpeechRecognitionService) {
+        speechRecognitionService = service
+    }
+    
+    /**
+     * Start voice recording
+     */
+    fun startVoiceRecording() {
+        val recorder = audioRecorder ?: return
+        viewmodelScope.launch {
+            val started = recorder.startRecording()
+            if (!started) {
+                val errorMessage = Message(
+                    content = MessageContent.Text("Ошибка: Не удалось начать запись. Проверьте разрешения на запись аудио."),
+                    role = MessageRole.ASSISTANT
+                )
+                uiState = uiState.copy(
+                    messages = uiState.messages + errorMessage
+                )
+            }
+        }
+    }
+    
+    /**
+     * Stop voice recording and transcribe
+     */
+    fun stopVoiceRecording() {
+        val recorder = audioRecorder ?: return
+        val service = speechRecognitionService ?: return
+        
+        viewmodelScope.launch {
+            uiState = uiState.copy(isTranscribing = true)
+            
+            try {
+                // For Android, we use live recognition, so we need to handle it differently
+                // For now, we'll try to stop recording and get the file
+                val audioFilePath = recorder.stopRecording()
+                
+                if (audioFilePath != null) {
+                    // Transcribe audio file
+                    val transcribedText = service.transcribeAudio(audioFilePath)
+                    
+                    if (transcribedText != null && transcribedText.isNotBlank()) {
+                        // Set transcribed text as input and send message
+                        uiState = uiState.copy(
+                            inputText = transcribedText,
+                            isTranscribing = false
+                        )
+                        // Automatically send the message
+                        sendMessage()
+                    } else {
+                        uiState = uiState.copy(isTranscribing = false)
+                        val errorMessage = Message(
+                            content = MessageContent.Text("Ошибка: Не удалось распознать речь. Попробуйте еще раз."),
+                            role = MessageRole.ASSISTANT
+                        )
+                        uiState = uiState.copy(
+                            messages = uiState.messages + errorMessage
+                        )
+                    }
+                } else {
+                    uiState = uiState.copy(isTranscribing = false)
+                    val errorMessage = Message(
+                        content = MessageContent.Text("Ошибка: Не удалось сохранить запись."),
+                        role = MessageRole.ASSISTANT
+                    )
+                    uiState = uiState.copy(
+                        messages = uiState.messages + errorMessage
+                    )
+                }
+            } catch (e: Exception) {
+                uiState = uiState.copy(isTranscribing = false)
+                val errorMessage = Message(
+                    content = MessageContent.Text("Ошибка при распознавании речи: ${e.message ?: "Неизвестная ошибка"}"),
+                    role = MessageRole.ASSISTANT
+                )
+                uiState = uiState.copy(
+                    messages = uiState.messages + errorMessage
+                )
+            }
+        }
+    }
+    
+    /**
+     * Cancel voice recording
+     */
+    fun cancelVoiceRecording() {
+        val recorder = audioRecorder ?: return
+        viewmodelScope.launch {
+            recorder.cancelRecording()
+            uiState = uiState.copy(
+                isRecording = false,
+                recordingDuration = 0L,
+                isTranscribing = false
+            )
+        }
     }
 
     /**
